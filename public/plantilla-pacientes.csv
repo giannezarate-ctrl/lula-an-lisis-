@@ -1,0 +1,11 @@
+id_paciente,nombres,apellidos,edad,sexo,peso,altura,presion_sistolica,presion_diastolica,frecuencia_cardiaca,glucosa,colesterol,saturacion_oxigeno,temperatura,antecedentes_familiares,fumador,consumo_alcohol,actividad_fisica,diagnostico_preliminar,fecha_consulta
+1001,Juan,Pérez García,45,M,75,170,130,85,75,100,190,97,36.5,false,false,false,moderada,Chequeo Preventivo,2025-01-15
+1002,María,González López,52,F,68,160,145,90,80,120,210,96,36.6,true,false,false,sedentario,Hipertensión Arterial,2025-01-20
+1003,Carlos,Rodríguez Pérez,67,M,92,172,165,100,90,180,250,93,36.7,true,true,true,sedentario,Diabetes Mellitus Tipo 2,2025-02-01
+1004,Ana,Torres Vega,35,F,62,165,118,74,68,92,178,99,36.6,false,false,false,activa,Chequeo Preventivo,2025-02-05
+1005,Pedro,Sánchez Mora,51,M,105,175,148,92,82,132,232,96,36.5,true,true,true,sedentario,Obesidad Grado I,2025-02-10
+1006,Lucía,Fernández Castro,73,F,58,155,165,88,78,168,215,94,36.4,true,false,false,sedentario,Hipertensión Arterial,2025-02-15
+1007,Roberto,Díaz Salazar,29,M,78,180,122,76,65,88,165,99,36.5,false,false,true,activa,Chequeo Deportivo,2025-02-20
+1008,Sofía,Martínez Ruiz,46,F,72,162,138,86,76,118,210,97,36.6,true,false,false,moderada,Sobrepeso,2025-03-01
+1009,Miguel,Castro Vargas,61,M,95,170,162,98,92,175,256,93,36.7,true,true,true,sedentario,Cardiopatía Isquémica,2025-03-05
+1010,Elena,Vargas Mendoza,38,F,65,167,115,72,70,95,182,98,36.5,false,false,false,activa,Chequeo Preventivo,2025-03-10

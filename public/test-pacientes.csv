@@ -1,0 +1,19 @@
+'use client'
+
+const sample = [
+  { id_paciente: 1001, nombres: 'Juan', apellidos: 'Pérez', edad: 45, sexo: 'M', peso: 75, altura: 170,
+    presion_sistolica: 130, presion_diastolica: 85, frecuencia_cardiaca: 75, glucosa: 100, colesterol: 190,
+    saturacion_oxigeno: 97, temperatura: 36.5, antecedentes_familiares: 'false', fumador: 'false',
+    consumo_alcohol: 'false', actividad_fisica: 'moderada', diagnostico_preliminar: 'Chequeo',
+    fecha_consulta: '2025-01-15' },
+  { id_paciente: 1002, nombres: 'María', apellidos: 'García', edad: 52, sexo: 'F', peso: 68, altura: 160,
+    presion_sistolica: 145, presion_diastolica: 90, frecuencia_cardiaca: 80, glucosa: 120, colesterol: 210,
+    saturacion_oxigeno: 96, temperatura: 36.6, antecedentes_familiares: 'true', fumador: 'false',
+    consumo_alcohol: 'false', actividad_fisica: 'sedentario', diagnostico_preliminar: 'Hipertension',
+    fecha_consulta: '2025-01-20' },
+  { id_paciente: 1003, nombres: 'Carlos', apellidos: 'López', edad: 67, sexo: 'M', peso: 92, altura: 172,
+    presion_sistolica: 165, presion_diastolica: 100, frecuencia_cardiaca: 90, glucosa: 180, colesterol: 250,
+    saturacion_oxigeno: 93, temperatura: 36.7, antecedentes_familiares: 'true', fumador: 'true',
+    consumo_alcohol: 'true', actividad_fisica: 'sedentario', diagnostico_preliminar: 'Diabetes',
+    fecha_consulta: '2025-02-01' },
+]
