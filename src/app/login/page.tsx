@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
-import { Eye, EyeOff, Loader2, Sparkles, Shield, Database, Stethoscope } from 'lucide-react'
+import { Eye, EyeOff, Loader2, Sparkles, Shield, Database, Stethoscope, Brain } from 'lucide-react'
 
 const roleInfo = [
   {
@@ -61,7 +61,7 @@ export default function LoginPage() {
         <div className="text-center mb-8">
           <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-purple-500 via-violet-500 to-fuchsia-500 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-500/40 ring-1 ring-white/10 relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-white/20" />
-            <span className="relative text-white font-bold text-xl">LA</span>
+            <Brain className="relative w-8 h-8 text-white" />
           </div>
           <h1 className="text-2xl font-bold text-white tracking-tight">LULA ANÁLISIS</h1>
           <p className="text-[#8888a0] text-sm mt-1">Plataforma Inteligente de Analítica Clínica</p>
