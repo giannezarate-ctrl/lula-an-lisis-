@@ -8,7 +8,7 @@ interface AuthContextType {
   user: User | null
   loading: boolean
   error: string | null
-  signIn: (email: string, password: string) => Promise<void>
+  signIn: (email: string, password: string) => Promise<{ error?: string }>
   signOut: () => void
   hasPermission: (section: string) => boolean
 }
@@ -26,15 +26,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(false)
   }, [])
 
-  async function signIn(email: string, password: string) {
+  async function signIn(email: string, password: string): Promise<{ error?: string }> {
     try {
       setError(null)
       setLoading(true)
       const result = await authSignIn(email, password)
-      setUser(result)
+      if (result.error) {
+        setError(result.error)
+        return { error: result.error }
+      }
+      setUser(result.user)
+      return {}
     } catch (e: any) {
-      setError(e.message || 'Error al iniciar sesión')
-      throw e
+      const msg = e.message || 'Error al iniciar sesión'
+      setError(msg)
+      return { error: msg }
     } finally {
       setLoading(false)
     }

@@ -42,11 +42,17 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [selectedRole, setSelectedRole] = useState<string | null>(null)
+  const [loginError, setLoginError] = useState('')
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!email || !password) return
-    await signIn(email, password)
+    setLoginError('')
+    const result = await signIn(email, password)
+    if (result.error) {
+      setLoginError(result.error)
+      return
+    }
     router.push('/dashboard')
   }
 
@@ -135,9 +141,9 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {error && (
+            {(error || loginError) && (
               <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/25 text-sm text-rose-300">
-                {error}
+                {loginError || error}
               </div>
             )}
 

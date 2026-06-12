@@ -2,30 +2,38 @@ import { User, UserRole } from '@/types/auth'
 
 const STORAGE_KEY = 'lula_auth_user'
 
-export async function signIn(email: string, password: string): Promise<User> {
+export async function signIn(email: string, password: string): Promise<{ user: User; error?: string }> {
   await new Promise(r => setTimeout(r, 500))
 
-  const adminEmails = ['admin@lula.com', 'admin']
-  const analistaEmails = ['analista@lula.com', 'analista']
-  const medicoEmails = ['medico@lula.com', 'medico']
+  const credentials: Record<string, { password: string; rol: UserRole }> = {
+    'admin@lula.com': { password: 'admin123', rol: 'admin' },
+    'analista@lula.com': { password: 'analista123', rol: 'analista' },
+    'medico@lula.com': { password: 'medico123', rol: 'medico' },
+  }
 
-  let rol: UserRole = 'medico'
-  if (adminEmails.includes(email.toLowerCase())) rol = 'admin'
-  else if (analistaEmails.includes(email.toLowerCase())) rol = 'analista'
-  else if (medicoEmails.includes(email.toLowerCase())) rol = 'medico'
+  const emailLower = email.toLowerCase().trim()
+  const cred = credentials[emailLower]
+
+  if (!cred) {
+    return { user: { id: '', email, nombre: '', rol: 'medico' }, error: 'Correo no registrado' }
+  }
+
+  if (cred.password !== password) {
+    return { user: { id: '', email, nombre: '', rol: 'medico' }, error: 'Contraseña incorrecta' }
+  }
 
   const user: User = {
     id: crypto.randomUUID(),
     email,
     nombre: email.split('@')[0],
-    rol,
+    rol: cred.rol,
   }
 
   if (typeof window !== 'undefined') {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(user))
   }
 
-  return user
+  return { user }
 }
 
 export function getUser(): User | null {
