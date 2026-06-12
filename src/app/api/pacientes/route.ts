@@ -224,6 +224,23 @@ export async function GET(request: NextRequest) {
     const riesgo = searchParams.get('riesgo')
     const search = searchParams.get('search')?.toLowerCase().trim()
     const all = searchParams.get('all') === 'true'
+    const singleId = searchParams.get('id')
+
+    if (singleId) {
+      const idNum = parseInt(singleId)
+      if (!idNum || isNaN(idNum)) {
+        return NextResponse.json({ ok: false, error: 'ID inválido' }, { status: 400 })
+      }
+      const { data, error } = await supabase
+        .from('pacientes')
+        .select('*')
+        .eq('id_paciente', idNum)
+        .single()
+      if (error || !data) {
+        return NextResponse.json({ ok: false, error: 'Paciente no encontrado' }, { status: 404 })
+      }
+      return NextResponse.json({ ok: true, paciente: data })
+    }
 
     let query = supabase
       .from('pacientes')

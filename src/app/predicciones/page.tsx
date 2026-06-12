@@ -1,18 +1,18 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import AppLayout from '@/components/ui/AppLayout'
 import { EmptyState } from '@/components/ui/EmptyState'
 import {
   Brain, Activity, Heart, Droplets, Wind, Thermometer,
   AlertTriangle, Shield, TrendingUp, Lightbulb,
-  ChevronRight, Sparkles, Weight, Zap,
+  ChevronRight, Sparkles, Weight, Zap, Search, User,
 } from 'lucide-react'
 import {
   calcularIMC, calcularRiesgoScore, generarFactoresRiesgo,
   generarRecomendaciones, generarExplicacion,
 } from '@/lib/utils'
-import { PacienteFormData } from '@/types/pacientes'
+import { PacienteFormData, Paciente } from '@/types/pacientes'
 
 const inputClases = "glass-input w-full rounded-xl px-4 py-3 text-base transition-all"
 
@@ -38,6 +38,53 @@ export default function PrediccionesPage() {
     factores: string[]; explicacion: string; recomendaciones: string[]
   }>(null)
   const [predicting, setPredicting] = useState(false)
+
+  const [busquedaId, setBusquedaId] = useState('')
+  const [pacienteSeleccionado, setPacienteSeleccionado] = useState<Paciente | null>(null)
+  const [buscandoPaciente, setBuscandoPaciente] = useState(false)
+  const [errorPaciente, setErrorPaciente] = useState('')
+
+  const buscarPaciente = useCallback(async () => {
+    const id = parseInt(busquedaId)
+    if (!id || isNaN(id) || id <= 0) {
+      setErrorPaciente('Ingrese un ID válido')
+      return
+    }
+    setBuscandoPaciente(true)
+    setErrorPaciente('')
+    setPacienteSeleccionado(null)
+    try {
+      const res = await fetch(`/api/pacientes?id=${id}`)
+      const data = await res.json()
+      if (!data.ok || !data.paciente) {
+        setErrorPaciente(`Paciente #${id} no encontrado`)
+        return
+      }
+      const p: Paciente = data.paciente
+      setPacienteSeleccionado(p)
+      setForm({
+        edad: p.edad || 45,
+        peso: p.peso || 75,
+        altura: p.altura || 170,
+        presion_sistolica: p.presion_sistolica || 120,
+        presion_diastolica: p.presion_diastolica || 80,
+        frecuencia_cardiaca: p.frecuencia_cardiaca || 75,
+        glucosa: p.glucosa || 100,
+        colesterol: p.colesterol || 200,
+        fumador: p.fumador || false,
+        sexo: p.sexo || 'Masculino',
+        antecedentes_familiares: p.antecedentes_familiares || false,
+        consumo_alcohol: p.consumo_alcohol || false,
+        actividad_fisica: p.actividad_fisica || 'moderada',
+        temperatura: p.temperatura || 36.5,
+        saturacion_oxigeno: p.saturacion_oxigeno || 98,
+      })
+    } catch {
+      setErrorPaciente('Error al buscar paciente')
+    } finally {
+      setBuscandoPaciente(false)
+    }
+  }, [busquedaId])
 
   function predecir() {
     setPredicting(true)
@@ -89,33 +136,79 @@ export default function PrediccionesPage() {
 
   return (
     <AppLayout>
-      <div className="w-full space-y-8 relative z-10">
-        <div className="animate-slide-left">
+      <div className="w-full space-y-7 relative z-10">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-6 border-b border-[#2a2a45]/30">
           <div className="flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-gradient-to-br from-purple-600/20 to-violet-600/10 border border-purple-500/20 border-gradient-flow">
-              <Brain className="w-6 h-6 text-purple-400" />
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500/20 to-purple-500/10 border border-violet-500/20 flex items-center justify-center">
+              <Brain className="w-6 h-6 text-violet-400" />
             </div>
             <div>
-              <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight">Predicciones AI</h1>
-              <p className="text-[#8888a0] text-base mt-1">Evaluación inteligente de riesgo clínico</p>
+              <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight">Predicciones AI</h1>
+              <p className="text-[#8888a0] text-sm mt-0.5">Evaluación inteligente de riesgo clínico</p>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div className="glass-card rounded-2xl p-8 border border-[#2a2a45]/35 animate-slide-in">
-            <div className="flex items-center gap-4 mb-8">
-              <div className="p-3 rounded-xl bg-gradient-to-br from-purple-600/20 to-violet-600/10 border border-purple-500/20">
-                <Activity className="w-6 h-6 text-purple-400" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="rounded-xl p-6 border border-[#2a2a45]/30 bg-[#0e0e1a]/50 animate-fade-in">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-lg bg-purple-500/15 flex items-center justify-center">
+                <Activity className="w-5 h-5 text-purple-400" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-white">Datos del Paciente</h2>
-                <p className="text-sm text-[#8888a0]">Ingrese los valores para la predicción</p>
+                <h2 className="text-base font-semibold text-white">Datos del Paciente</h2>
+                <p className="text-xs text-[#8888a0] mt-0.5">Ingrese los valores para la predicción</p>
               </div>
             </div>
 
-            <div className="space-y-5">
-              <div className="grid grid-cols-2 gap-5">
+            <div className="space-y-4">
+              <div className="bg-gradient-to-r from-violet-900/20 to-purple-900/10 rounded-xl p-4 border border-violet-500/15">
+                <p className="text-xs text-[#8888a0] mb-3 font-medium">Buscar paciente existente por ID</p>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    placeholder="ID del paciente"
+                    value={busquedaId}
+                    onChange={e => { setBusquedaId(e.target.value); setErrorPaciente('') }}
+                    onKeyDown={e => e.key === 'Enter' && buscarPaciente()}
+                    className={`${inputClases} flex-1`}
+                  />
+                  <button onClick={buscarPaciente} disabled={buscandoPaciente}
+                    className="px-4 py-3 rounded-xl bg-violet-600/20 border border-violet-500/30 text-violet-300 hover:bg-violet-600/30 transition-all flex items-center gap-2 text-sm font-medium disabled:opacity-50">
+                    {buscandoPaciente ? (
+                      <div className="w-4 h-4 border-2 border-violet-400 border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Search className="w-4 h-4" />
+                    )}
+                    Buscar
+                  </button>
+                </div>
+                {errorPaciente && (
+                  <p className="text-red-400 text-xs mt-2">{errorPaciente}</p>
+                )}
+                {pacienteSeleccionado && (
+                  <div className="mt-3 flex items-center gap-3 bg-violet-500/10 rounded-lg px-3 py-2 border border-violet-500/20">
+                    <User className="w-4 h-4 text-violet-400" />
+                    <span className="text-sm text-violet-300 font-medium">
+                      #{pacienteSeleccionado.id_paciente} — {pacienteSeleccionado.nombres} {pacienteSeleccionado.apellidos}
+                    </span>
+                    <span className="text-xs text-[#8888a0] ml-auto">
+                      {pacienteSeleccionado.edad}a · {pacienteSeleccionado.sexo}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-[#2a2a45]/30"></div>
+                </div>
+                <div className="relative flex justify-center text-xs">
+                  <span className="bg-[#0e0e1a] px-3 text-[#555570]">o ingresa manualmente</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
                 {inputGroup('Edad', 'edad')}
                 {inputGroup('Sexo', 'sexo', { options: ['Masculino', 'Femenino'] })}
               </div>
@@ -165,7 +258,7 @@ export default function PrediccionesPage() {
               </div>
 
               <button onClick={predecir} disabled={predicting}
-                className="btn-primary w-full py-4 rounded-xl text-base font-semibold flex items-center justify-center gap-2.5 mt-6 relative overflow-hidden group">
+                className="w-full py-3 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 mt-4 bg-gradient-to-r from-violet-600 to-purple-500 hover:from-violet-500 hover:to-purple-400 text-white shadow-lg shadow-violet-500/20 hover:shadow-violet-500/30 transition-all duration-200">
                 {predicting ? (
                   <><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> Analizando...</>
                 ) : (
@@ -216,27 +309,27 @@ export default function PrediccionesPage() {
 
             {resultado && !predicting && (
               <>
-                <div className={`glass-card rounded-2xl p-8 border animate-slide-in ${riesgoStyles[resultado.riesgo].border}`}>
-                  <div className="flex items-center gap-4 mb-6">
-                    <div className={`p-3 rounded-xl ${
-                      resultado.riesgo === 'Bajo' ? 'bg-emerald-500/20' :
-                      resultado.riesgo === 'Medio' ? 'bg-amber-500/20' :
-                      resultado.riesgo === 'Alto' ? 'bg-red-500/20' : 'bg-rose-500/20'
+                <div className={`rounded-xl p-6 border animate-fade-in bg-[#0e0e1a]/50 ${riesgoStyles[resultado.riesgo].border}`}>
+                  <div className="flex items-center gap-3 mb-5">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                      resultado.riesgo === 'Bajo' ? 'bg-emerald-500/15' :
+                      resultado.riesgo === 'Medio' ? 'bg-amber-500/15' :
+                      resultado.riesgo === 'Alto' ? 'bg-red-500/15' : 'bg-rose-500/15'
                     }`}>
-                      <Shield className={`w-6 h-6 ${
+                      <Shield className={`w-5 h-5 ${
                         resultado.riesgo === 'Bajo' ? 'text-emerald-400' :
                         resultado.riesgo === 'Medio' ? 'text-amber-400' :
                         resultado.riesgo === 'Alto' ? 'text-red-400' : 'text-rose-400'
                       }`} />
                     </div>
                     <div>
-                      <h2 className="text-lg font-semibold text-white">Resultado de la Predicción</h2>
-                      <p className="text-sm text-[#8888a0]">Evaluación completada</p>
+                      <h2 className="text-base font-semibold text-white">Resultado de la Predicción</h2>
+                      <p className="text-xs text-[#8888a0] mt-0.5">Evaluación completada</p>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-6 mb-6">
-                    <span className={`text-4xl font-bold ${riesgoStyles[resultado.riesgo].color}`}>
+                  <div className="flex items-center gap-5 mb-5">
+                    <span className={`text-3xl font-bold ${riesgoStyles[resultado.riesgo].color}`}>
                       {resultado.riesgo}
                     </span>
                     <div className="flex-1">

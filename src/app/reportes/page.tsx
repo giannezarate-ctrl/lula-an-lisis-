@@ -61,7 +61,7 @@ export default function ReportesPage() {
     setLoading(true)
     try {
       const [pRes, eRes] = await Promise.all([
-        fetch('/api/pacientes', { cache: 'no-store' }).then(r => r.json()),
+        fetch('/api/pacientes?all=true', { cache: 'no-store' }).then(r => r.json()),
         fetch('/api/etl-logs?limit=100', { cache: 'no-store' }).then(r => r.json()),
       ])
       if (pRes.ok) setPacientes(pRes.pacientes || [])
@@ -329,8 +329,8 @@ export default function ReportesPage() {
               presion_sistolica: p.presion_sistolica, presion_diastolica: p.presion_diastolica,
               glucosa: p.glucosa, colesterol: p.colesterol, saturacion_oxigeno: p.saturacion_oxigeno,
               frecuencia_cardiaca: p.frecuencia_cardiaca, temperatura: p.temperatura,
-              antecedentes_familiares: p.antecedentes_familiares === 'Sí' || p.antecedentes_familiares === 'Si',
-              fumador: p.fumador, consumo_alcohol: p.consumo_alcohol === 'Sí' || p.consumo_alcohol === 'Si',
+              antecedentes_familiares: Boolean(p.antecedentes_familiares),
+              fumador: Boolean(p.fumador), consumo_alcohol: Boolean(p.consumo_alcohol),
             })
             return [
               String(p.id_paciente),
@@ -469,8 +469,8 @@ export default function ReportesPage() {
             presion_sistolica: p.presion_sistolica, presion_diastolica: p.presion_diastolica,
             glucosa: p.glucosa, colesterol: p.colesterol, saturacion_oxigeno: p.saturacion_oxigeno,
             frecuencia_cardiaca: p.frecuencia_cardiaca, temperatura: p.temperatura,
-            antecedentes_familiares: p.antecedentes_familiares === 'Sí' || p.antecedentes_familiares === 'Si',
-            fumador: p.fumador, consumo_alcohol: p.consumo_alcohol === 'Sí' || p.consumo_alcohol === 'Si',
+            antecedentes_familiares: Boolean(p.antecedentes_familiares),
+            fumador: Boolean(p.fumador), consumo_alcohol: Boolean(p.consumo_alcohol),
           })
           return {
             ID: p.id_paciente,
@@ -528,8 +528,8 @@ export default function ReportesPage() {
             presion_sistolica: p.presion_sistolica, presion_diastolica: p.presion_diastolica,
             glucosa: p.glucosa, colesterol: p.colesterol, saturacion_oxigeno: p.saturacion_oxigeno,
             frecuencia_cardiaca: p.frecuencia_cardiaca, temperatura: p.temperatura,
-            antecedentes_familiares: p.antecedentes_familiares === 'Sí' || p.antecedentes_familiares === 'Si',
-            fumador: p.fumador, consumo_alcohol: p.consumo_alcohol === 'Sí' || p.consumo_alcohol === 'Si',
+            antecedentes_familiares: Boolean(p.antecedentes_familiares),
+            fumador: Boolean(p.fumador), consumo_alcohol: Boolean(p.consumo_alcohol),
           })
           return [p.id_paciente, `${p.nombres} ${p.apellidos}`, p.edad, p.riesgo_enfermedad, preds.slice(0, 3).map(x => `${x.condicion} (${x.probabilidad}%)`).join(' | ')]
         })
@@ -568,49 +568,26 @@ export default function ReportesPage() {
 
   return (
     <AppLayout>
-      <div className="w-full space-y-8 relative z-10">
-        <div className="animate-slide-left">
+      <div className="w-full space-y-7 relative z-10">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-6 border-b border-[#2a2a45]/30">
           <div className="flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-gradient-to-br from-purple-600/20 to-violet-600/10 border border-purple-500/20">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-violet-500/10 border border-purple-500/20 flex items-center justify-center">
               <FileText className="w-6 h-6 text-purple-400" />
             </div>
             <div>
-              <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight">Reportes</h1>
-              <p className="text-[#8888a0] text-base mt-1">Exportación de reportes clínicos en múltiples formatos</p>
+              <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight">Reportes</h1>
+              <p className="text-[#8888a0] text-sm mt-0.5">Exportación de reportes clínicos en múltiples formatos</p>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="glass-card rounded-xl p-5 border border-purple-500/20">
+        <div className="grid grid-cols-1 gap-4">
+          <div className="glass-card rounded-xl p-6 border border-purple-500/25 bg-gradient-to-br from-purple-600/10 to-violet-600/5">
             <div className="flex items-center gap-2 text-purple-300 text-xs font-medium uppercase tracking-wider">
               <Users size={14} /> Población Total
             </div>
-            <div className="text-3xl font-bold text-white mt-2">{pacientes.length}</div>
-            <div className="text-xs text-[#8888a0] mt-1">pacientes registrados</div>
-          </div>
-          <div className="glass-card rounded-xl p-5 border border-red-500/20">
-            <div className="flex items-center gap-2 text-red-300 text-xs font-medium uppercase tracking-wider">
-              <AlertTriangle size={14} /> Críticos
-            </div>
-            <div className="text-3xl font-bold text-white mt-2">{totalRiesgo.critico}</div>
-            <div className="text-xs text-[#8888a0] mt-1">requieren atención urgente</div>
-          </div>
-          <div className="glass-card rounded-xl p-5 border border-amber-500/20">
-            <div className="flex items-center gap-2 text-amber-300 text-xs font-medium uppercase tracking-wider">
-              <Activity size={14} /> Ejecuciones ETL
-            </div>
-            <div className="text-3xl font-bold text-white mt-2">{etlLogs.length}</div>
-            <div className="text-xs text-[#8888a0] mt-1">en la bitácora</div>
-          </div>
-          <div className="glass-card rounded-xl p-5 border border-violet-500/20">
-            <div className="flex items-center gap-2 text-violet-300 text-xs font-medium uppercase tracking-wider">
-              <TrendingUp size={14} /> Calidad Datos
-            </div>
-            <div className="text-3xl font-bold text-white mt-2">
-              {etlLogs.length > 0 ? Math.round(etlLogs.reduce((s, l) => s + l.calidad_pct, 0) / etlLogs.length) : 0}%
-            </div>
-            <div className="text-xs text-[#8888a0] mt-1">promedio en cargas</div>
+            <div className="text-5xl font-bold text-white mt-3 number-glow">{pacientes.length.toLocaleString()}</div>
+            <div className="text-sm text-[#8888a0] mt-1">pacientes registrados en el sistema</div>
           </div>
         </div>
 
@@ -620,29 +597,29 @@ export default function ReportesPage() {
             const recordCount = getRecordCount(reporte.tipo)
             return (
               <div key={reporte.tipo}
-                className={`glass-card rounded-2xl p-7 border bg-gradient-to-br ${reporte.gradient} ${reporte.border} glass-card-hover animate-slide-in`}
+                className={`rounded-xl p-5 border border-[#2a2a45]/30 bg-[#0e0e1a]/50 hover:border-purple-500/30 transition-all duration-300 animate-fade-in`}
                 style={{ animationDelay: `${idx * 80}ms` }}>
-                <div className="flex items-start gap-5">
-                  <div className={`p-3.5 rounded-xl bg-gradient-to-br ${reporte.gradient} border ${reporte.border}`}>
-                    <Icon className={`w-7 h-7 ${reporte.textColor}`} />
+                <div className="flex items-start gap-4">
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center bg-white/[0.04] ${reporte.textColor}`}>
+                    <Icon className="w-5 h-5" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="text-xl font-semibold text-white">{reporte.titulo}</h3>
-                      <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${reporte.textColor} bg-white/5`}>
+                      <h3 className="text-base font-semibold text-white">{reporte.titulo}</h3>
+                      <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${reporte.textColor} bg-white/[0.04]`}>
                         {reporte.badge}
                       </span>
                     </div>
-                    <p className="text-sm text-[#8888a0] mt-1.5">{reporte.descripcion}</p>
-                    <div className="mt-2 text-xs text-white/70">
-                      <span className="font-semibold text-white">{recordCount}</span> registros disponibles
+                    <p className="text-sm text-[#8888a0] mt-1">{reporte.descripcion}</p>
+                    <div className="mt-2 text-xs text-[#8888a0]">
+                      <span className="font-semibold text-white">{recordCount.toLocaleString()}</span> registros disponibles
                     </div>
                   </div>
                 </div>
-                <div className="mt-6 flex flex-wrap gap-3">
+                <div className="mt-4 flex flex-wrap gap-2">
                   <button onClick={() => setPreviewOpen(reporte.tipo)}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border transition-all duration-200 bg-white/5 text-white/80 hover:bg-white/10 border-white/10">
-                    <Eye size={15} /> Vista Previa
+                    className="flex items-center gap-2 px-3.5 py-2 rounded-lg text-[13px] font-medium border transition-all duration-200 bg-white/[0.04] text-white/80 hover:bg-white/[0.08] border-[#2a2a45]/40">
+                    <Eye size={14} /> Vista Previa
                   </button>
                   {downloadFormats.map(fmt => {
                     const FmtIcon = fmt.icon
@@ -652,8 +629,8 @@ export default function ReportesPage() {
                         type="button"
                         onClick={() => fmt.action(reporte.tipo)}
                         disabled={isGenerating}
-                        className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border transition-all duration-200 ${fmt.color} disabled:opacity-40 active:scale-95`}>
-                        {isGenerating ? <Loader2 size={15} className="animate-spin" /> : <FmtIcon size={15} />}
+                        className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-[13px] font-medium border transition-all duration-200 ${fmt.color} disabled:opacity-40 active:scale-95`}>
+                        {isGenerating ? <Loader2 size={14} className="animate-spin" /> : <FmtIcon size={14} />}
                         {isGenerating ? 'Generando...' : fmt.label}
                       </button>
                     )
@@ -854,8 +831,8 @@ function PreviewModal({ tipo, pacientes, etlLogs, totalRiesgo, onClose, onExport
                     presion_sistolica: p.presion_sistolica, presion_diastolica: p.presion_diastolica,
                     glucosa: p.glucosa, colesterol: p.colesterol, saturacion_oxigeno: p.saturacion_oxigeno,
                     frecuencia_cardiaca: p.frecuencia_cardiaca, temperatura: p.temperatura,
-                    antecedentes_familiares: p.antecedentes_familiares === 'Sí' || p.antecedentes_familiares === 'Si',
-                    fumador: p.fumador, consumo_alcohol: p.consumo_alcohol === 'Sí' || p.consumo_alcohol === 'Si',
+                    antecedentes_familiares: Boolean(p.antecedentes_familiares),
+                    fumador: Boolean(p.fumador), consumo_alcohol: Boolean(p.consumo_alcohol),
                   })
                   return (
                     <div key={p.id_paciente} className="p-3 rounded-lg bg-white/5 border border-white/10">

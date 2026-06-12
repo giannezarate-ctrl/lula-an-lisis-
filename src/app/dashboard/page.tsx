@@ -4,9 +4,10 @@ import { useEffect, useState, useRef } from 'react'
 import AppLayout from '@/components/ui/AppLayout'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { PageHeader } from '@/components/ui/PageHeader'
+import ModalPortal from '@/components/ui/ModalPortal'
 import { supabase } from '@/lib/supabase'
 import { Paciente } from '@/types/pacientes'
-import { getRiesgoCalculado, suscribirCambioPacientes } from '@/lib/utils'
+import { getRiesgoCalculado, suscribirCambioPacientes, emitirCambioPacientes } from '@/lib/utils'
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area,
@@ -15,7 +16,7 @@ import {
   Users, AlertTriangle, Heart, Activity, Brain,
   TrendingUp, TrendingDown, ShieldAlert, Droplets, Wind,
   RefreshCw, Sparkles, Database, FileSpreadsheet, UserPlus, BarChart3,
-  Stethoscope, ChevronRight, Calendar, Phone, Mail,
+  Stethoscope, ChevronRight, Calendar, Phone, Mail, Trash2, X, Loader2,
 } from 'lucide-react'
 
 const COLORS = { bajo: '#10b981', medio: '#f59e0b', alto: '#ef4444', critico: '#e11d48' }
@@ -72,6 +73,8 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [tab, setTab] = useState<'metricas' | 'seguimientos'>('metricas')
+  const [confirmDeleteAll, setConfirmDeleteAll] = useState(false)
+  const [deletingAll, setDeletingAll] = useState(false)
   const [stats, setStats] = useState({
     total: 0, criticos: 0, riesgoBajo: 0, riesgoMedio: 0,
     riesgoAlto: 0, riesgoCritico: 0, imcPromedio: 0, edadPromedio: 0,
@@ -100,13 +103,13 @@ export default function DashboardPage() {
   async function cargarDatos() {
     if (pacientes.length > 0) setRefreshing(true); else setLoading(true)
     try {
-      const response = await fetch('/api/pacientes', { cache: 'no-store' })
+      const response = await fetch('/api/pacientes?all=true', { cache: 'no-store' })
       const json = await response.json()
       const data: Paciente[] = json.ok ? (json.pacientes || []) : []
 
       const pConRiesgoReal = data.map(x => ({
         ...x,
-        riesgo_calculado: getRiesgoCalculado(x) as 'Bajo' | 'Medio' | 'Alto' | 'Critico',
+        riesgo_calculado: (x.riesgo_enfermedad || getRiesgoCalculado(x)) as 'Bajo' | 'Medio' | 'Alto' | 'Critico',
       }))
 
       setPacientes(pConRiesgoReal)
@@ -127,6 +130,24 @@ export default function DashboardPage() {
       })
     } catch (e) { console.error(e) }
     finally { setLoading(false); setRefreshing(false) }
+  }
+
+  async function eliminarTodosLosPacientes() {
+    setDeletingAll(true)
+    try {
+      const r = await fetch('/api/pacientes?scope=all', { method: 'DELETE' })
+      const data = await r.json()
+      if (data.ok) {
+        setConfirmDeleteAll(false)
+        emitirCambioPacientes()
+        await cargarDatos()
+      } else {
+        alert(`Error: ${data.error || 'No se pudo eliminar'}`)
+      }
+    } catch (e: any) {
+      alert(`Error de red: ${e?.message || e}`)
+    }
+    setDeletingAll(false)
   }
 
   const pacientesConRiesgo = pacientes.map(p => ({
@@ -251,26 +272,30 @@ export default function DashboardPage() {
   return (
     <AppLayout>
       <div className="w-full space-y-8 relative z-10">
-        <div className="flex items-center justify-between">
-          <div className="animate-slide-left">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-gradient-to-br from-purple-600/20 to-violet-600/10 border border-purple-500/20 border-gradient-flow">
-                <Sparkles className="w-6 h-6 text-purple-400" />
-              </div>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-6 border-b border-[#2a2a45]/30">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-violet-500/10 border border-purple-500/20 flex items-center justify-center">
+              <Sparkles className="w-6 h-6 text-purple-400" />
+            </div>
             <div>
-              <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight">Análisis Clínico</h1>
-              <p className="text-[#8888a0] text-base mt-1">
-                Monitorización clínica en tiempo real
-                <span className="text-purple-400/60 ml-2">• {pacientes.length} registros</span>
+              <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight">Análisis Clínico</h1>
+              <p className="text-[#8888a0] text-sm mt-0.5">
+                Monitorización clínica en tiempo real · <span className="text-purple-400/80">{pacientes.length.toLocaleString()} registros</span>
               </p>
             </div>
-            </div>
           </div>
-          <button onClick={cargarDatos} disabled={refreshing}
-            className="glass-button px-6 py-3 rounded-xl text-base flex items-center gap-2.5">
-            <RefreshCw size={18} className={refreshing ? 'animate-spin' : ''} />
-            {refreshing ? 'Actualizando...' : 'Actualizar'}
-          </button>
+          <div className="flex items-center gap-2.5">
+            <button onClick={() => setConfirmDeleteAll(true)} disabled={pacientes.length === 0 || deletingAll}
+              className="px-4 py-2.5 rounded-lg text-sm font-medium flex items-center gap-2 border border-rose-500/25 bg-rose-500/8 text-rose-300 hover:bg-rose-500/15 hover:border-rose-500/40 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed">
+              <Trash2 size={16} />
+              Eliminar Todos
+            </button>
+            <button onClick={cargarDatos} disabled={refreshing}
+              className="px-4 py-2.5 rounded-lg text-sm font-medium flex items-center gap-2 bg-white/[0.04] hover:bg-white/[0.08] border border-[#2a2a45]/40 hover:border-purple-500/30 text-white transition-all duration-200">
+              <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
+              {refreshing ? 'Actualizando...' : 'Actualizar'}
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-5">
@@ -278,16 +303,17 @@ export default function DashboardPage() {
             const Icon = card.icon
             return (
               <div key={card.label}
-                className={`glass-card rounded-2xl p-5 border ${card.border} bg-gradient-to-br ${card.color} glass-card-hover stat-card animate-slide-in`}
+                className={`group rounded-xl p-5 border ${card.border} bg-gradient-to-br ${card.color} hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-300 cursor-default`}
                 style={{ animationDelay: card.delay }}>
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs font-medium text-[#8888a0] uppercase tracking-widest">{card.label}</span>
-                  <Icon className={`w-5 h-5 ${card.textColor} opacity-70`} />
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-[11px] font-semibold text-[#8888a0] uppercase tracking-wider">{card.label}</span>
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${card.textColor} bg-white/[0.04] group-hover:bg-white/[0.08] transition-colors`}>
+                    <Icon className="w-4 h-4" />
+                  </div>
                 </div>
-                <p className={`text-2xl md:text-3xl font-bold ${card.textColor} number-glow`}>
+                <p className={`text-2xl md:text-[28px] font-bold ${card.textColor} leading-none tracking-tight`}>
                   <AnimatedCounter value={card.value} suffix={card.suffix || ''} />
                 </p>
-                <div className={`stat-bar mt-3 ${card.textColor}`} />
               </div>
             )
           })}
@@ -549,6 +575,51 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+
+      {confirmDeleteAll && (
+        <ModalPortal>
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4 modal-backdrop"
+            onClick={(e) => { if (e.target === e.currentTarget && !deletingAll) setConfirmDeleteAll(false) }}>
+            <div className="glass-card rounded-2xl w-full max-w-md p-6 border border-rose-500/30 animate-scale-in shadow-2xl shadow-rose-500/20 relative z-[301]">
+              <div className="flex items-start gap-4 mb-5">
+                <div className="p-3 rounded-xl bg-rose-600/30 border border-rose-500/40 flex-shrink-0">
+                  <Trash2 className="w-6 h-6 text-rose-300" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-white">¿Eliminar todos los pacientes?</h3>
+                  <p className="text-sm text-[#8888a0] mt-1">Esta acción no se puede deshacer.</p>
+                </div>
+              </div>
+
+              <div className="bg-rose-500/10 border border-rose-500/25 rounded-xl p-4 mb-5">
+                <p className="text-sm text-rose-200">
+                  Se eliminarán <span className="font-bold text-rose-100">{pacientes.length.toLocaleString()}</span> pacientes
+                  de la base de datos, incluyendo pacientes críticos, alertas y todo el historial clínico.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-3">
+                <button
+                  onClick={() => setConfirmDeleteAll(false)}
+                  disabled={deletingAll}
+                  className="px-5 py-2.5 rounded-xl text-sm font-medium text-[#8888a0] hover:text-white hover:bg-white/5 border border-[#2a2a45]/40 transition-all duration-200 disabled:opacity-50">
+                  Cancelar
+                </button>
+                <button
+                  onClick={eliminarTodosLosPacientes}
+                  disabled={deletingAll}
+                  className="px-5 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white shadow-lg shadow-rose-500/30 transition-all duration-200 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed">
+                  {deletingAll ? (
+                    <><Loader2 size={16} className="animate-spin" /> Eliminando...</>
+                  ) : (
+                    <><Trash2 size={16} /> Sí, eliminar todos</>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </ModalPortal>
+      )}
     </AppLayout>
   )
 }

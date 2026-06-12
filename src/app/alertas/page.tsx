@@ -152,27 +152,27 @@ export default function AlertasPage() {
 
   return (
     <AppLayout>
-      <div className="w-full space-y-8 relative z-10">
-        <div className="flex items-center justify-between animate-slide-left">
+      <div className="w-full space-y-7 relative z-10">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-6 border-b border-[#2a2a45]/30">
           <div className="flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-gradient-to-br from-red-600/20 to-rose-600/10 border border-red-500/20 border-gradient-flow">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500/20 to-rose-500/10 border border-red-500/20 flex items-center justify-center">
               <Zap className="w-6 h-6 text-red-400" />
             </div>
             <div>
-              <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight">Pacientes en Estado Crítico</h1>
-              <p className="text-[#8888a0] text-base mt-1">
+              <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight">Pacientes en Estado Crítico</h1>
+              <p className="text-[#8888a0] text-sm mt-0.5">
                 Monitoreo clínico en tiempo real
                 {!loading && alertas.length > 0
-                  ? <span className="ml-2 text-red-400/80 font-medium">• {alertas.length} paciente{alertas.length === 1 ? '' : 's'} en estado crítico</span>
-                  : !loading && <span className="ml-2 text-emerald-400/80 font-medium">• Sin pacientes críticos</span>
+                  ? <span className="ml-2 text-red-400/80 font-medium">· {alertas.length} paciente{alertas.length === 1 ? '' : 's'} en estado crítico</span>
+                  : !loading && <span className="ml-2 text-emerald-400/80 font-medium">· Sin pacientes críticos</span>
                 }
               </p>
             </div>
           </div>
           {alertas.length > 0 && (
             <button onClick={generarReporte}
-              className="btn-primary px-6 py-3 rounded-xl text-base font-medium flex items-center gap-2.5">
-              <FileText size={18} />Reporte PDF
+              className="px-5 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2 bg-gradient-to-r from-red-600 to-rose-500 hover:from-red-500 hover:to-rose-400 text-white shadow-lg shadow-red-500/20 hover:shadow-red-500/30 transition-all duration-200">
+              <FileText size={16} />Reporte PDF
             </button>
           )}
         </div>
@@ -238,49 +238,49 @@ export default function AlertasPage() {
                 const isCritica = alerta.severidad === 'critica'
                 return (
                   <div key={`${alerta.paciente.id_paciente}-${i}`}
-                    className={`glass-card rounded-2xl p-6 border animate-slide-in hover-lift ${
-                      isCritica ? 'alert-card-critica' : 'border-amber-500/20 bg-gradient-to-br from-amber-900/10 to-amber-800/5'
+                    className={`rounded-xl p-5 border bg-[#0e0e1a]/50 hover:border-red-500/40 transition-all duration-300 animate-fade-in ${
+                      isCritica ? 'border-red-500/25' : 'border-amber-500/20'
                     }`}
                     style={{ animationDelay: `${i * 80}ms` }}>
-                    <div className="flex items-start gap-5">
-                      <div className={`p-3.5 rounded-xl flex-shrink-0 relative ${
-                        isCritica ? 'bg-red-500/20 text-red-400 icon-ring' : 'bg-amber-500/20 text-amber-400'
+                    <div className="flex items-start gap-4">
+                      <div className={`w-12 h-12 rounded-lg flex-shrink-0 flex items-center justify-center ${
+                        isCritica ? 'bg-red-500/15 text-red-400' : 'bg-amber-500/15 text-amber-400'
                       }`}>
-                        <Icon className="w-6 h-6" />
+                        <Icon className="w-5 h-5" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-4">
                           <div>
-                            <h3 className="text-lg font-semibold text-white">
+                            <h3 className="text-base font-semibold text-white">
                               {alerta.paciente.nombres} {alerta.paciente.apellidos}
                             </h3>
-                            <p className="text-sm text-[#555570] mt-1">
-                              ID #{alerta.paciente.id_paciente} • {alerta.paciente.edad} años • {alerta.paciente.sexo}
+                            <p className="text-xs text-[#8888a0] mt-0.5 font-mono">
+                              ID #{alerta.paciente.id_paciente} · {alerta.paciente.edad} años · {alerta.paciente.sexo}
                             </p>
                           </div>
-                          <div className="flex items-center gap-3 flex-shrink-0">
-                            <span className="px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider border bg-red-500/15 text-red-300 border-red-500/25 flex items-center gap-1.5">
+                          <div className="flex items-center gap-2.5 flex-shrink-0">
+                            <span className="px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider border bg-red-500/15 text-red-300 border-red-500/25 flex items-center gap-1.5">
                               <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
                               Crítico
                             </span>
                             <div className="text-right">
-                              <p className="text-[9px] text-[#555570] uppercase tracking-wider">Score</p>
-                              <p className="text-lg font-bold text-red-300">{alerta.score}</p>
+                              <p className="text-[9px] text-[#666680] uppercase tracking-wider">Score</p>
+                              <p className="text-base font-bold text-red-300">{alerta.score}</p>
                             </div>
                           </div>
                         </div>
-                        <div className={`mt-4 p-4 rounded-xl text-base border ${
+                        <div className={`mt-4 p-3.5 rounded-lg border ${
                           isCritica
-                            ? 'bg-red-500/8 border-red-500/15 text-red-200'
-                            : 'bg-amber-500/8 border-amber-500/15 text-amber-200'
+                            ? 'bg-red-500/5 border-red-500/15'
+                            : 'bg-amber-500/5 border-amber-500/15'
                         }`}>
-                          <div className="flex items-start gap-3">
-                            <AlertTriangle className={`w-5 h-5 mt-0.5 flex-shrink-0 ${isCritica ? 'text-red-400' : 'text-amber-400'}`} />
+                          <div className="flex items-start gap-2.5">
+                            <AlertTriangle className={`w-4 h-4 mt-0.5 flex-shrink-0 ${isCritica ? 'text-red-400' : 'text-amber-400'}`} />
                             <div>
-                              <p className="text-[10px] uppercase tracking-wider text-red-300/70 font-semibold mb-1.5">Factores críticos detectados</p>
+                              <p className="text-[10px] uppercase tracking-wider text-[#8888a0] font-semibold mb-2">Factores críticos</p>
                               <div className="flex flex-wrap gap-1.5">
                                 {alerta.detallesClinicos.map((d, idx) => (
-                                  <span key={idx} className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-red-500/15 text-red-200 border border-red-500/20">
+                                  <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-white/[0.04] text-[#d0d0e0] border border-[#2a2a45]/40">
                                     {d}
                                   </span>
                                 ))}
@@ -288,18 +288,18 @@ export default function AlertasPage() {
                             </div>
                           </div>
                         </div>
-                        <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-[#555570]">
+                        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-[#8888a0]">
                           <span className="flex items-center gap-1.5">
-                            <Clock className="w-4 h-4" />{alerta.paciente.fecha_consulta}
+                            <Clock className="w-3.5 h-3.5" />{alerta.paciente.fecha_consulta}
                           </span>
-                          <span className="text-[#2a2a45]">|</span>
-                          <span>PA: {alerta.paciente.presion_sistolica}/{alerta.paciente.presion_diastolica}</span>
-                          <span className="text-[#2a2a45]">|</span>
-                          <span>Glucosa: {alerta.paciente.glucosa}</span>
-                          <span className="text-[#2a2a45]">|</span>
-                          <span>SpO2: {alerta.paciente.saturacion_oxigeno}%</span>
-                          <span className="text-[#2a2a45]">|</span>
-                          <span>IMC: {alerta.paciente.imc}</span>
+                          <span className="text-[#3a3a55]">·</span>
+                          <span>PA: <span className="text-white font-medium">{alerta.paciente.presion_sistolica}/{alerta.paciente.presion_diastolica}</span></span>
+                          <span className="text-[#3a3a55]">·</span>
+                          <span>Glucosa: <span className="text-white font-medium">{alerta.paciente.glucosa}</span></span>
+                          <span className="text-[#3a3a55]">·</span>
+                          <span>SpO2: <span className="text-white font-medium">{alerta.paciente.saturacion_oxigeno}%</span></span>
+                          <span className="text-[#3a3a55]">·</span>
+                          <span>IMC: <span className="text-white font-medium">{alerta.paciente.imc}</span></span>
                         </div>
                       </div>
                     </div>

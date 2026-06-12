@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import * as XLSX from 'xlsx'
+import { generarDatasetSucio } from '@/lib/generate-dirty-data'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -36,6 +37,8 @@ const ALIASES: Record<string, string> = {
   consumo_alcohol: 'consumo_alcohol', alcohol: 'consumo_alcohol',
   actividad_fisica: 'actividad_fisica', actividad: 'actividad_fisica', exercise: 'actividad_fisica',
   diagnostico_preliminar: 'diagnostico_preliminar', diagnostico: 'diagnostico_preliminar', diagnóstico: 'diagnostico_preliminar', diagnosis: 'diagnostico_preliminar',
+  imc: 'imc', bmi: 'imc', indice_masa_corporal: 'imc', índice_masa_corporal: 'imc',
+  riesgo_enfermedad: 'riesgo_enfermedad', riesgo: 'riesgo_enfermedad', risk: 'riesgo_enfermedad',
   fecha_consulta: 'fecha_consulta', fecha: 'fecha_consulta', date: 'fecha_consulta',
 }
 
@@ -77,6 +80,7 @@ function clinicalDefault(field: string): number {
 
 const RANGOS: Record<string, { min: number; max: number }> = {
   edad: { min: 0, max: 150 }, peso: { min: 1, max: 500 }, altura: { min: 20, max: 300 },
+  imc: { min: 5, max: 100 },
   presion_sistolica: { min: 50, max: 300 }, presion_diastolica: { min: 30, max: 200 },
   frecuencia_cardiaca: { min: 20, max: 300 }, glucosa: { min: 10, max: 1000 },
   colesterol: { min: 50, max: 800 }, saturacion_oxigeno: { min: 0, max: 100 }, temperatura: { min: 30, max: 45 },
@@ -210,7 +214,16 @@ function parseRows(raw: any[]): {
         edad,
         sexo: sexoN,
         peso: parseFloat(mapped.peso) || clinicalDefault('peso'),
-        altura: parseFloat(mapped.altura) || clinicalDefault('altura'),
+        altura: (() => {
+          const raw = parseFloat(mapped.altura) || clinicalDefault('altura')
+          if (raw > 0 && raw < 10) return Math.round(raw * 100 * 100) / 100
+          return raw
+        })(),
+        imc: (() => {
+          const rawAlt = parseFloat(mapped.altura) || clinicalDefault('altura')
+          const altCm = rawAlt > 0 && rawAlt < 10 ? Math.round(rawAlt * 100 * 100) / 100 : rawAlt
+          return parseFloat(mapped.imc) || calcularIMC(parseFloat(mapped.peso) || clinicalDefault('peso'), altCm)
+        })(),
         presion_sistolica: parseInt(mapped.presion_sistolica) || clinicalDefault('presion_sistolica'),
         presion_diastolica: parseInt(mapped.presion_diastolica) || clinicalDefault('presion_diastolica'),
         frecuencia_cardiaca: parseInt(mapped.frecuencia_cardiaca) || clinicalDefault('frecuencia_cardiaca'),
@@ -223,9 +236,23 @@ function parseRows(raw: any[]): {
         consumo_alcohol: parseBool(mapped.consumo_alcohol),
         actividad_fisica: normalizarActividad(mapped.actividad_fisica),
         diagnostico_preliminar: estandarizarDiagnostico(mapped.diagnostico_preliminar || 'Sin diagnóstico'),
-        fecha_consulta: mapped.fecha_consulta
-          ? new Date(mapped.fecha_consulta).toISOString().split('T')[0]
-          : new Date().toISOString().split('T')[0],
+        riesgo_enfermedad: (() => {
+          const r = String(mapped.riesgo_enfermedad || '').trim().toLowerCase()
+          if (['bajo', 'medio', 'alto', 'critico', 'crítico'].includes(r)) {
+            return r === 'crítico' ? 'Critico' : r.charAt(0).toUpperCase() + r.slice(1)
+          }
+          return ''
+        })(),
+        fecha_consulta: (() => {
+          if (!mapped.fecha_consulta) return new Date().toISOString().split('T')[0]
+          try {
+            const d = new Date(mapped.fecha_consulta)
+            if (!isNaN(d.getTime()) && d.getFullYear() > 1900 && d.getFullYear() < 2100) {
+              return d.toISOString().split('T')[0]
+            }
+          } catch {}
+          return new Date().toISOString().split('T')[0]
+        })(),
       }
 
       let valido = true
@@ -287,24 +314,54 @@ export async function POST(request: NextRequest) {
   let columnasDetectadas: string[] = []
 
   try {
-    const formData = await request.formData()
-    const file = formData.get('file') as File | null
-    const tipoArchivo = (formData.get('tipo') as string) || 'demo'
+    const contentType = request.headers.get('content-type') || ''
+    let action = ''
+    let file: File | null = null
+    let tipoArchivo = 'archivo'
 
-    if (!file && tipoArchivo !== 'demo') {
+    if (contentType.includes('application/json')) {
+      const body = await request.json()
+      action = body.action || ''
+      tipoArchivo = body.tipo || 'generate'
+    } else {
+      const formData = await request.formData()
+      file = formData.get('file') as File | null
+      tipoArchivo = (formData.get('tipo') as string) || 'archivo'
+      action = tipoArchivo
+    }
+
+    if (action === 'generate') {
+      const totalRegistros = 1800
+      const { rows, stats: genStats } = generarDatasetSucio(totalRegistros)
+
+      const csvLines: string[] = []
+      const headers = Object.keys(rows[0] || {})
+      csvLines.push(headers.join(','))
+      for (const row of rows) {
+        const vals = headers.map(h => {
+          const v = (row as any)[h]
+          if (v === null || v === undefined) return ''
+          const s = String(v)
+          if (s.includes(',') || s.includes('"')) return `"${s.replace(/"/g, '""')}"`
+          return s
+        })
+        csvLines.push(vals.join(','))
+      }
+      const csvText = csvLines.join('\n')
+      const csvBlob = new Blob([csvText], { type: 'text/csv' })
+      file = new File([csvBlob], 'dataset_sucio_generado.csv', { type: 'text/csv' })
+      tipoArchivo = 'CSV'
+      archivoNombre = 'dataset_sucio_generado.csv'
+    }
+
+    if (!file) {
       return NextResponse.json(
         { ok: false, error: 'No se proporcionó archivo' },
         { status: 400 }
       )
     }
 
-    if (tipoArchivo === 'demo') {
-      const demo = generarDatosDemo()
-      const resultado = await ejecutarETL(demo, 'demo.xlsx', 'DEMO', startTime, errores)
-      return NextResponse.json(resultado)
-    }
-
-    archivoNombre = file!.name
+    archivoNombre = archivoNombre || file.name
     const ext = archivoNombre.split('.').pop()?.toLowerCase()
     let rawData: any[] = []
 
@@ -580,9 +637,9 @@ export async function POST(request: NextRequest) {
 
     corregidos = imputarNulos(parsed)
 
-    const rows = parsed.map(r => {
+    let finalRows = parsed.map(r => {
       const imc = calcularIMC(r.peso, r.altura)
-      const riesgo = calcularRiesgo(r)
+      const riesgo = r.riesgo_enfermedad || calcularRiesgo(r)
       if (riesgo === 'Critico') criticos++
       return {
         id_paciente: r.id_paciente,
@@ -611,9 +668,60 @@ export async function POST(request: NextRequest) {
       }
     })
 
+    if (action === 'generate' && finalRows.length < 1800) {
+      let nextId = Math.max(...finalRows.map(r => r.id_paciente), 0) + 1
+      const { rows: extras } = generarDatasetSucio(1800 - finalRows.length + 100)
+      for (const e of extras) {
+        if (finalRows.length >= 1800) break
+        const peso = Number(e.peso) || 70
+        const altura = Number(e.altura) || 165
+        const imc = calcularIMC(peso, altura)
+        const riesgo = e.riesgo_enfermedad || calcularRiesgo({
+          ...e,
+          peso,
+          altura,
+          edad: Number(e.edad) || 45,
+          presion_sistolica: Number(e.presion_sistolica) || 120,
+          presion_diastolica: Number(e.presion_diastolica) || 80,
+          frecuencia_cardiaca: Number(e.frecuencia_cardiaca) || 75,
+          glucosa: Number(e.glucosa) || 100,
+          colesterol: Number(e.colesterol) || 200,
+          saturacion_oxigeno: Number(e.saturacion_oxigeno) || 97,
+          temperatura: Number(e.temperatura) || 36.5,
+        })
+        if (riesgo === 'Critico') criticos++
+        finalRows.push({
+          id_paciente: nextId++,
+          nombres: e.nombres,
+          apellidos: e.apellidos,
+          edad: Number(e.edad) || 45,
+          sexo: e.sexo,
+          peso,
+          altura,
+          imc,
+          clasificacion_imc: clasificarIMC(imc),
+          presion_sistolica: Number(e.presion_sistolica) || 120,
+          presion_diastolica: Number(e.presion_diastolica) || 80,
+          frecuencia_cardiaca: Number(e.frecuencia_cardiaca) || 75,
+          glucosa: Number(e.glucosa) || 100,
+          colesterol: Number(e.colesterol) || 200,
+          saturacion_oxigeno: Number(e.saturacion_oxigeno) || 97,
+          temperatura: Number(e.temperatura) || 36.5,
+          antecedentes_familiares: e.antecedentes_familiares,
+          fumador: e.fumador,
+          consumo_alcohol: e.consumo_alcohol,
+          actividad_fisica: e.actividad_fisica,
+          diagnostico_preliminar: e.diagnostico_preliminar,
+          riesgo_enfermedad: riesgo,
+          fecha_consulta: e.fecha_consulta,
+        })
+      }
+      insertados = finalRows.length
+    }
+
     const loteSize = 50
-    for (let i = 0; i < rows.length; i += loteSize) {
-      const lote = rows.slice(i, i + loteSize)
+    for (let i = 0; i < finalRows.length; i += loteSize) {
+      const lote = finalRows.slice(i, i + loteSize)
       const { error } = await supabase
         .from('pacientes')
         .upsert(lote, { onConflict: 'id_paciente' })

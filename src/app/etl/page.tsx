@@ -31,10 +31,10 @@ type EstadoProceso = 'idle' | 'subiendo' | 'procesando' | 'insertando' | 'comple
 
 function StatBox({ icon: Icon, label, value, color }: { icon: any; label: string; value: string | number; color: string }) {
   return (
-    <div className="bg-[#1a1a2e]/50 rounded-xl p-6 border border-[#2a2a45]/20 text-center hover-lift">
-      <Icon className={`w-6 h-6 ${color} mx-auto mb-3`} />
-      <p className="text-3xl font-bold text-white">{value}</p>
-      <p className="text-sm text-[#8888a0] mt-1 font-medium">{label}</p>
+    <div className="bg-[#0e0e1a]/50 rounded-lg p-4 border border-[#2a2a45]/30 text-center hover:border-purple-500/30 transition-colors">
+      <Icon className={`w-5 h-5 ${color} mx-auto mb-2`} />
+      <p className="text-2xl font-bold text-white tracking-tight">{value}</p>
+      <p className="text-xs text-[#8888a0] mt-1 font-medium">{label}</p>
     </div>
   )
 }
@@ -59,6 +59,7 @@ export default function ETLPage() {
   const [historial, setHistorial] = useState<ETLLog[]>([])
   const [showHistorial, setShowHistorial] = useState(false)
   const [stats, setStats] = useState({ total: 0, criticos: 0 })
+  const [generando, setGenerando] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const cargarHistorial = useCallback(async () => {
@@ -231,6 +232,80 @@ export default function ETLPage() {
     }
   }
 
+  async function generarYProcesar() {
+    setGenerando(true)
+    setEstado('subiendo')
+    setProgreso(5)
+    setPasoActual('Generando dataset sucio (~1800 registros)...')
+    setResumen(null)
+    setErrorMsg(null)
+    setErrorDetail(null)
+
+    try {
+      setTimeout(() => {
+        setProgreso(20)
+        setPasoActual('Generando datos con errores intencionales...')
+      }, 500)
+
+      const genResponse = await fetch('/api/etl', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'generate', tipo: 'generate' }),
+      })
+
+      if (!genResponse.ok) {
+        const errData = await genResponse.json()
+        throw new Error(errData.error || 'Error al generar dataset')
+      }
+
+      setEstado('procesando')
+      setProgreso(40)
+      setPasoActual('Transformando y limpiando datos...')
+
+      const data = await genResponse.json()
+
+      if (!data.ok) {
+        if (data.error === 'RLS_BLOQUEANDO') {
+          setErrorMsg('🔒 RLS bloqueando inserts en la tabla pacientes')
+          setErrorDetail({
+            message: 'RLS (Row Level Security) está activado en la tabla pacientes.',
+            rls: true,
+            sql: data.sql || 'ALTER TABLE pacientes DISABLE ROW LEVEL SECURITY;',
+            sqlExtra: 'ALTER TABLE etl_logs DISABLE ROW LEVEL SECURITY;',
+            registrosLeidos: data.antes?.total,
+            registrosGuardados: 0,
+            errores: data.errores,
+          })
+          setEstado('error')
+          return
+        }
+        throw new Error(data.error || 'Error en el proceso ETL')
+      }
+
+      setEstado('insertando')
+      setProgreso(80)
+      setPasoActual('Cargando en base de datos...')
+
+      await new Promise(r => setTimeout(r, 300))
+
+      setProgreso(100)
+      setPasoActual('¡Proceso completado!')
+      setEstado('completado')
+      setResumen(data)
+      await cargarStats()
+      await cargarHistorial()
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('lula:pacientes-updated'))
+      }
+    } catch (e: any) {
+      console.error('ETL generate error:', e)
+      setErrorMsg(e?.message || 'Error desconocido')
+      setEstado('error')
+      setPasoActual('Error en el proceso')
+    }
+    setGenerando(false)
+  }
+
   function resetear() {
     setArchivo(null); setEstado('idle'); setProgreso(0); setPasoActual('')
     setResumen(null); setErrorMsg(null); setErrorDetail(null)
@@ -279,91 +354,130 @@ ALTER TABLE etl_logs DISABLE ROW LEVEL SECURITY;`
 
   return (
     <AppLayout>
-      <div className="w-full space-y-8 relative z-10">
-        <div className="flex items-center justify-between animate-slide-left flex-wrap gap-4">
+      <div className="w-full space-y-7 relative z-10">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-6 border-b border-[#2a2a45]/30">
           <div className="flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-gradient-to-br from-purple-600/20 to-violet-600/10 border border-purple-500/20">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-violet-500/10 border border-purple-500/20 flex items-center justify-center">
               <Database className="w-6 h-6 text-purple-400" />
             </div>
             <div>
-              <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight">Proceso ETL</h1>
-              <p className="text-[#8888a0] text-base mt-1">Extracción, Transformación y Carga de datos clínicos</p>
+              <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight">Proceso ETL</h1>
+              <p className="text-[#8888a0] text-sm mt-0.5">Extracción, Transformación y Carga de datos clínicos</p>
             </div>
           </div>
           {stats.total > 0 && (
-            <div className="flex items-center gap-3">
-              <div className="px-4 py-2.5 rounded-xl bg-[#1a1a2e]/50 border border-[#2a2a45]/30 flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
+              <div className="px-3 py-2 rounded-lg bg-white/[0.04] border border-[#2a2a45]/30 flex items-center gap-2">
                 <Users className="w-4 h-4 text-purple-400" />
-                <span className="text-sm text-[#8888a0]">Total:</span>
-                <span className="text-base font-bold text-white">{stats.total}</span>
+                <span className="text-xs text-[#8888a0]">Total:</span>
+                <span className="text-sm font-bold text-white">{stats.total.toLocaleString()}</span>
               </div>
-              <div className="px-4 py-2.5 rounded-xl bg-rose-900/20 border border-rose-500/30 flex items-center gap-2">
+              <div className="px-3 py-2 rounded-lg bg-rose-500/10 border border-rose-500/25 flex items-center gap-2">
                 <Heart className="w-4 h-4 text-rose-400" />
-                <span className="text-sm text-[#8888a0]">Críticos:</span>
-                <span className="text-base font-bold text-rose-300">{stats.criticos}</span>
+                <span className="text-xs text-[#8888a0]">Críticos:</span>
+                <span className="text-sm font-bold text-rose-300">{stats.criticos}</span>
               </div>
             </div>
           )}
         </div>
 
-        <div className="glass-card rounded-2xl p-8 border border-[#2a2a45]/40 animate-fade-in">
-            <div className="flex items-start gap-4 mb-5">
-              <div className="p-3.5 rounded-xl bg-purple-600/20 border border-purple-500/20 icon-ring">
-                <Upload className="w-7 h-7 text-purple-400" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="rounded-xl p-6 border border-purple-500/30 bg-gradient-to-br from-purple-900/20 to-violet-900/10 animate-fade-in">
+            <div className="flex items-start gap-3 mb-5">
+              <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                <Sparkles className="w-5 h-5 text-purple-400" />
               </div>
               <div className="flex-1">
-                <h2 className="text-lg font-semibold text-white mb-1">Cargar Archivo</h2>
-                <p className="text-sm text-[#8888a0]">Excel (.xlsx, .xls) o CSV</p>
+                <h2 className="text-base font-semibold text-white">Generar y Procesar Dataset</h2>
+                <p className="text-xs text-[#8888a0] mt-0.5">Crea ~1800 registros sucios y los limpia automáticamente</p>
               </div>
             </div>
 
             <div className="space-y-3">
+              <div className="bg-[#0a0a12]/60 rounded-lg p-4 border border-purple-500/15 mb-4">
+                <p className="text-xs text-[#8888a0] mb-2 font-semibold">El dataset incluye intencionalmente:</p>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {[
+                    'Valores nulos', 'Duplicados', 'Tipos incorrectos',
+                    'Valores atípicos', 'Errores ortográficos', 'Errores de sexo',
+                    'Fechas inválidas', 'Booleanos corruptos',
+                  ].map(item => (
+                    <div key={item} className="flex items-center gap-1.5 text-[10px] text-[#666680]">
+                      <span className="w-1 h-1 rounded-full bg-purple-500/60" />
+                      {item}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <button onClick={generarYProcesar} disabled={generando || (estado !== 'idle' && estado !== 'completado' && estado !== 'error')}
+                className="w-full px-4 py-3.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2.5 bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-500 hover:to-violet-500 text-white shadow-lg shadow-purple-500/25 transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed">
+                {generando
+                  ? <><Loader2 size={18} className="animate-spin" /> Generando y procesando...</>
+                  : <><Sparkles size={18} /> Generar y Procesar Dataset</>}
+              </button>
+            </div>
+          </div>
+
+          <div className="rounded-xl p-6 border border-[#2a2a45]/30 bg-[#0e0e1a]/50 animate-fade-in">
+            <div className="flex items-start gap-3 mb-5">
+              <div className="w-10 h-10 rounded-lg bg-purple-500/15 flex items-center justify-center">
+                <Upload className="w-5 h-5 text-purple-400" />
+              </div>
+              <div className="flex-1">
+                <h2 className="text-base font-semibold text-white">Subir Archivo Propio</h2>
+                <p className="text-xs text-[#8888a0] mt-0.5">Excel (.xlsx, .xls) o CSV</p>
+              </div>
+            </div>
+
+            <div className="space-y-2.5">
               <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls,.tsv,.txt"
                 onChange={e => { setArchivo(e.target.files?.[0] || null); setResumen(null); setEstado('idle') }}
                 className="hidden" />
 
               <button onClick={() => fileInputRef.current?.click()} disabled={estado !== 'idle' && estado !== 'completado' && estado !== 'error'}
-                className="w-full glass-button px-6 py-4 rounded-xl text-base font-medium flex items-center justify-center gap-2.5 hover-lift disabled:opacity-50">
-                <FileSpreadsheet size={20} /> {archivo ? 'Cambiar Archivo' : 'Seleccionar Archivo'}
+                className="w-full px-4 py-3 rounded-lg text-sm font-medium flex items-center justify-center gap-2.5 bg-white/[0.04] hover:bg-white/[0.08] border border-[#2a2a45]/40 hover:border-purple-500/30 text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                <FileSpreadsheet size={18} /> {archivo ? 'Cambiar Archivo' : 'Seleccionar Archivo'}
               </button>
 
               <button onClick={descargarTemplate}
-                className="w-full px-6 py-3 rounded-xl text-sm text-purple-300 hover:text-purple-200 hover:bg-purple-600/10 transition-all flex items-center justify-center gap-2 border border-purple-500/20">
-                <Download size={16} /> Descargar Plantilla Excel
+                className="w-full px-4 py-2.5 rounded-lg text-[13px] text-purple-300 hover:text-purple-200 hover:bg-purple-500/10 transition-all flex items-center justify-center gap-2 border border-purple-500/20">
+                <Download size={15} /> Descargar Plantilla Excel
               </button>
 
               <button onClick={limpiarPacientesPrueba} disabled={limpiando}
                 title="Elimina todos los pacientes con datos por defecto (Sin nombre / Sin apellido)"
-                className="w-full px-6 py-3 rounded-xl text-sm text-rose-300 hover:text-rose-200 hover:bg-rose-600/10 transition-all flex items-center justify-center gap-2 border border-rose-500/20 disabled:opacity-50">
-                {limpiando ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                className="w-full px-4 py-2.5 rounded-lg text-[13px] text-rose-300 hover:text-rose-200 hover:bg-rose-500/10 transition-all flex items-center justify-center gap-2 border border-rose-500/20 disabled:opacity-50">
+                {limpiando ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
                 {limpiando ? 'Limpiando...' : 'Limpiar Pacientes de Prueba'}
               </button>
             </div>
 
             {archivo && (
-              <div className="mt-5 space-y-3 animate-fade-in">
-                <div className="flex items-center justify-between bg-[#1a1a2e]/50 rounded-xl px-5 py-4 border border-[#2a2a45]/20">
-                  <div className="flex items-center gap-4 min-w-0">
-                    <FileSpreadsheet className="w-6 h-6 text-purple-400 flex-shrink-0" />
+              <div className="mt-4 space-y-2.5 animate-fade-in">
+                <div className="flex items-center justify-between bg-white/[0.04] rounded-lg px-4 py-3 border border-[#2a2a45]/30">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <FileSpreadsheet className="w-5 h-5 text-purple-400 flex-shrink-0" />
                     <div className="min-w-0">
                       <p className="text-sm text-white font-medium truncate">{archivo.name}</p>
                       <p className="text-xs text-[#8888a0]">{(archivo.size / 1024).toFixed(1)} KB</p>
                     </div>
                   </div>
                   <button onClick={resetear}
-                    className="p-2 rounded-lg text-[#555570] hover:text-red-400 hover:bg-red-600/15 transition-all flex-shrink-0">
-                    <Trash2 size={18} />
+                    className="p-1.5 rounded-md text-[#666680] hover:text-red-400 hover:bg-red-500/10 transition-all flex-shrink-0">
+                    <Trash2 size={16} />
                   </button>
                 </div>
                 <button onClick={ejecutarETL} disabled={estado !== 'idle' && estado !== 'completado' && estado !== 'error'}
-                  className="btn-primary w-full px-6 py-3.5 rounded-xl text-base font-semibold flex items-center justify-center gap-2.5">
+                  className="w-full px-4 py-3 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-violet-500 hover:from-purple-500 hover:to-violet-400 text-white shadow-lg shadow-purple-500/20 hover:shadow-purple-500/30 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
                   {estado !== 'idle' && estado !== 'completado' && estado !== 'error'
-                    ? <><Loader2 size={18} className="animate-spin" /> Procesando...</>
-                    : <><Sparkles size={18} /> Ejecutar ETL Completo</>}
+                    ? <><Loader2 size={16} className="animate-spin" /> Procesando...</>
+                    : <><Sparkles size={16} /> Ejecutar ETL Completo</>}
                 </button>
               </div>
             )}
           </div>
+        </div>
 
         {estado !== 'idle' && estado !== 'completado' && (
           <div className="glass-card rounded-2xl p-8 border border-purple-500/30 space-y-6 animate-fade-in">

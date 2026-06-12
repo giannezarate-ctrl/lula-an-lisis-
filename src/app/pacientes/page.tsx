@@ -103,14 +103,14 @@ export default function PacientesPage() {
   }
 
   const pacientesFiltrados = pacientes.filter(p => {
-    const riesgoReal = getRiesgoCalculado(p).toLowerCase()
+    const riesgoReal = (p.riesgo_enfermedad || getRiesgoCalculado(p)).toLowerCase()
     if (filtro !== 'todos' && riesgoReal !== filtro) return false
     if (search) {
       const q = search.toLowerCase()
       return `${p.nombres} ${p.apellidos}`.toLowerCase().includes(q) || String(p.id_paciente).includes(q)
     }
     return true
-  })
+  }).sort((a, b) => a.id_paciente - b.id_paciente)
 
   const totalItems = pacientesFiltrados.length
   const totalPagsFiltradas = Math.max(1, Math.ceil(totalItems / pageSize))
@@ -431,26 +431,25 @@ export default function PacientesPage() {
           </div>
         </div>
       )}
-      <div className="w-full space-y-8 relative z-10">
-        <div className="flex items-center justify-between animate-slide-left">
+      <div className="w-full space-y-7 relative z-10">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-6 border-b border-[#2a2a45]/30">
           <div className="flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-gradient-to-br from-purple-600/20 to-violet-600/10 border border-purple-500/20 border-gradient-flow">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-violet-500/10 border border-purple-500/20 flex items-center justify-center">
               <Users className="w-6 h-6 text-purple-400" />
             </div>
             <div>
-              <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight">Pacientes</h1>
-              <p className="text-[#8888a0] text-base mt-1">
-                Gestión clínica
-                {!loading && <span className="text-purple-400/60 ml-2">• {pacientes.length} registros</span>}
+              <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight">Pacientes</h1>
+              <p className="text-[#8888a0] text-sm mt-0.5">
+                Gestión clínica · <span className="text-purple-400/80">{pacientes.length.toLocaleString()} registros</span>
                 {loading && loadingProgress.total > 0 && (
-                  <span className="text-purple-400/60 ml-2">• Cargando {loadingProgress.loaded}/{loadingProgress.total}...</span>
+                  <span className="text-purple-400/60 ml-2">· Cargando {loadingProgress.loaded}/{loadingProgress.total}...</span>
                 )}
               </p>
             </div>
           </div>
           <button onClick={() => abrirModal('crear')}
-            className="btn-primary px-6 py-3 rounded-xl text-base font-medium flex items-center gap-2.5">
-            <Plus size={18} />
+            className="px-5 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2 bg-gradient-to-r from-purple-600 to-violet-500 hover:from-purple-500 hover:to-violet-400 text-white shadow-lg shadow-purple-500/20 hover:shadow-purple-500/30 transition-all duration-200">
+            <Plus size={16} />
             Agregar Paciente
           </button>
         </div>
@@ -460,16 +459,16 @@ export default function PacientesPage() {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#555570]" />
             <input type="text" placeholder="Buscar por nombre o ID..."
               value={search} onChange={e => setSearch(e.target.value)}
-              className="glass-input w-full rounded-xl pl-12 pr-5 py-3 text-base" />
+              className="w-full rounded-lg pl-11 pr-4 py-2.5 text-sm bg-white/[0.04] border border-[#2a2a45]/40 focus:border-purple-500/50 focus:bg-white/[0.06] text-white placeholder-[#666680] focus:outline-none transition-all" />
           </div>
-          <div className="flex gap-2 flex-wrap bg-[#12121e]/50 rounded-xl p-1.5 border border-[#2a2a45]/30">
+          <div className="flex gap-1 flex-wrap bg-white/[0.03] rounded-lg p-1 border border-[#2a2a45]/30">
             {filtros.map(f => (
               <button key={f.value}
                 onClick={() => setFiltro(f.value)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                className={`px-3.5 py-1.5 rounded-md text-[13px] font-medium transition-all duration-200 ${
                   filtro === f.value
-                    ? 'bg-gradient-to-r from-purple-600/30 to-violet-600/20 text-purple-300 shadow-sm border border-purple-500/20'
-                    : 'text-[#666680] hover:text-[#d0d0e0] border border-transparent'
+                    ? 'bg-purple-500/15 text-purple-300'
+                    : 'text-[#666680] hover:text-white'
                 }`}>
                 {f.label}
               </button>
@@ -525,8 +524,8 @@ export default function PacientesPage() {
             ]}
           />
         ) : (
-          <div className="glass-card rounded-2xl border border-[#2a2a45]/30 overflow-hidden animate-fade-in">
-            <div className="px-5 py-3 border-b border-[#2a2a45]/30 bg-gradient-to-r from-[#0e0e1a] to-[#12121f] flex items-center justify-between flex-wrap gap-2">
+          <div className="rounded-xl border border-[#2a2a45]/30 overflow-hidden bg-[#0e0e1a]/50 animate-fade-in">
+            <div className="px-5 py-3 border-b border-[#2a2a45]/30 flex items-center justify-between flex-wrap gap-2">
               <p className="text-xs text-[#8888a0] flex items-center gap-2">
                 <ChevronRight className="w-3.5 h-3.5" />
                 <span>Desliza horizontalmente para ver todas las columnas · {pacientesFiltrados.length} pacientes</span>
@@ -538,35 +537,35 @@ export default function PacientesPage() {
             <div className="overflow-x-auto">
               <table className="table-custom w-full text-sm">
                 <thead>
-                  <tr>
-                    <th className="font-mono whitespace-nowrap">ID</th>
-                    <th className="whitespace-nowrap">Nombres</th>
-                    <th className="whitespace-nowrap">Apellidos</th>
-                    <th className="whitespace-nowrap">Edad</th>
-                    <th className="whitespace-nowrap">Sexo</th>
-                    <th className="whitespace-nowrap">Peso</th>
-                    <th className="whitespace-nowrap">Altura</th>
-                    <th className="whitespace-nowrap">IMC</th>
-                    <th className="whitespace-nowrap">PA</th>
-                    <th className="whitespace-nowrap">FC</th>
-                    <th className="whitespace-nowrap">Glucosa</th>
-                    <th className="whitespace-nowrap">Colest.</th>
-                    <th className="whitespace-nowrap">SpO₂</th>
-                    <th className="whitespace-nowrap">Temp.</th>
-                    <th className="whitespace-nowrap">Ant. Fam.</th>
-                    <th className="whitespace-nowrap">Fumador</th>
-                    <th className="whitespace-nowrap">Alcohol</th>
-                    <th className="whitespace-nowrap">Actividad</th>
-                    <th className="whitespace-nowrap">Diagnóstico</th>
-                    <th className="whitespace-nowrap">Riesgo</th>
-                    <th>
-                      <div className="flex items-center gap-1.5 whitespace-nowrap">
+                  <tr className="border-b border-[#2a2a45]/40">
+                    <th className="px-4 py-3 text-left text-[11px] font-semibold text-[#8888a0] uppercase tracking-wider font-mono">ID</th>
+                    <th className="px-4 py-3 text-left text-[11px] font-semibold text-[#8888a0] uppercase tracking-wider">Nombres</th>
+                    <th className="px-4 py-3 text-left text-[11px] font-semibold text-[#8888a0] uppercase tracking-wider">Apellidos</th>
+                    <th className="px-4 py-3 text-left text-[11px] font-semibold text-[#8888a0] uppercase tracking-wider">Edad</th>
+                    <th className="px-4 py-3 text-left text-[11px] font-semibold text-[#8888a0] uppercase tracking-wider">Sexo</th>
+                    <th className="px-4 py-3 text-left text-[11px] font-semibold text-[#8888a0] uppercase tracking-wider">Peso</th>
+                    <th className="px-4 py-3 text-left text-[11px] font-semibold text-[#8888a0] uppercase tracking-wider">Altura</th>
+                    <th className="px-4 py-3 text-left text-[11px] font-semibold text-[#8888a0] uppercase tracking-wider">IMC</th>
+                    <th className="px-4 py-3 text-left text-[11px] font-semibold text-[#8888a0] uppercase tracking-wider">PA</th>
+                    <th className="px-4 py-3 text-left text-[11px] font-semibold text-[#8888a0] uppercase tracking-wider">FC</th>
+                    <th className="px-4 py-3 text-left text-[11px] font-semibold text-[#8888a0] uppercase tracking-wider">Glucosa</th>
+                    <th className="px-4 py-3 text-left text-[11px] font-semibold text-[#8888a0] uppercase tracking-wider">Colest.</th>
+                    <th className="px-4 py-3 text-left text-[11px] font-semibold text-[#8888a0] uppercase tracking-wider">SpO₂</th>
+                    <th className="px-4 py-3 text-left text-[11px] font-semibold text-[#8888a0] uppercase tracking-wider">Temp.</th>
+                    <th className="px-4 py-3 text-left text-[11px] font-semibold text-[#8888a0] uppercase tracking-wider">Ant. Fam.</th>
+                    <th className="px-4 py-3 text-left text-[11px] font-semibold text-[#8888a0] uppercase tracking-wider">Fumador</th>
+                    <th className="px-4 py-3 text-left text-[11px] font-semibold text-[#8888a0] uppercase tracking-wider">Alcohol</th>
+                    <th className="px-4 py-3 text-left text-[11px] font-semibold text-[#8888a0] uppercase tracking-wider">Actividad</th>
+                    <th className="px-4 py-3 text-left text-[11px] font-semibold text-[#8888a0] uppercase tracking-wider">Diagnóstico</th>
+                    <th className="px-4 py-3 text-left text-[11px] font-semibold text-[#8888a0] uppercase tracking-wider">Riesgo</th>
+                    <th className="px-4 py-3 text-left text-[11px] font-semibold text-[#8888a0] uppercase tracking-wider">
+                      <div className="flex items-center gap-1.5">
                         <Brain size={12} className="text-purple-400" />
                         Predicción IA
                       </div>
                     </th>
-                    <th className="whitespace-nowrap">Fecha</th>
-                    <th className="text-right whitespace-nowrap">Acciones</th>
+                    <th className="px-4 py-3 text-left text-[11px] font-semibold text-[#8888a0] uppercase tracking-wider">Fecha</th>
+                    <th className="px-4 py-3 text-right text-[11px] font-semibold text-[#8888a0] uppercase tracking-wider">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -592,47 +591,47 @@ export default function PacientesPage() {
                     </tr>
                   ) : (
                     pacientesPaginados.map((p, idx) => (
-                      <tr key={p.id_paciente} className="animate-fade-in" style={{ animationDelay: `${idx * 30}ms` }}>
-                        <td className="font-mono text-xs text-[#555570]">#{p.id_paciente}</td>
-                        <td className="text-sm font-medium text-white whitespace-nowrap">{p.nombres}</td>
-                        <td className="text-sm text-[#8888a0] whitespace-nowrap">{p.apellidos}</td>
-                        <td className="text-sm whitespace-nowrap">{p.edad}<span className="text-[#666680] text-[10px]"> a</span></td>
-                        <td className="text-sm text-[#8888a0] whitespace-nowrap">{p.sexo}</td>
-                        <td className="text-sm whitespace-nowrap">{p.peso}<span className="text-[#666680] text-[10px]"> kg</span></td>
-                        <td className="text-sm whitespace-nowrap">{p.altura}<span className="text-[#666680] text-[10px]"> cm</span></td>
-                        <td className="text-sm font-medium whitespace-nowrap">{p.imc.toFixed(1)}</td>
-                        <td className="text-sm font-mono whitespace-nowrap">{p.presion_sistolica}/{p.presion_diastolica}</td>
-                        <td className="text-sm whitespace-nowrap">{p.frecuencia_cardiaca}<span className="text-[#666680] text-[10px]"> lpm</span></td>
-                        <td className="text-sm whitespace-nowrap">{p.glucosa}<span className="text-[#666680] text-[10px]"> mg</span></td>
-                        <td className="text-sm whitespace-nowrap">{p.colesterol}<span className="text-[#666680] text-[10px]"> mg</span></td>
-                        <td className="text-sm whitespace-nowrap">{p.saturacion_oxigeno}<span className="text-[#666680] text-[10px]">%</span></td>
-                        <td className="text-sm whitespace-nowrap">{p.temperatura}<span className="text-[#666680] text-[10px]">°</span></td>
-                        <td className="whitespace-nowrap">
+                      <tr key={p.id_paciente} className="border-b border-[#2a2a45]/20 hover:bg-white/[0.02] transition-colors animate-fade-in" style={{ animationDelay: `${idx * 30}ms` }}>
+                        <td className="px-4 py-3 font-mono text-xs text-[#8888a0]">#{p.id_paciente}</td>
+                        <td className="px-4 py-3 text-sm font-medium text-white whitespace-nowrap">{p.nombres}</td>
+                        <td className="px-4 py-3 text-sm text-[#b0b0c8] whitespace-nowrap">{p.apellidos}</td>
+                        <td className="px-4 py-3 text-sm whitespace-nowrap">{p.edad}<span className="text-[#666680] text-[10px]"> a</span></td>
+                        <td className="px-4 py-3 text-sm text-[#b0b0c8] whitespace-nowrap">{p.sexo}</td>
+                        <td className="px-4 py-3 text-sm whitespace-nowrap">{p.peso}<span className="text-[#666680] text-[10px]"> kg</span></td>
+                        <td className="px-4 py-3 text-sm whitespace-nowrap">{p.altura}<span className="text-[#666680] text-[10px]"> cm</span></td>
+                        <td className="px-4 py-3 text-sm font-medium whitespace-nowrap">{p.imc.toFixed(1)}</td>
+                        <td className="px-4 py-3 text-sm font-mono whitespace-nowrap">{p.presion_sistolica}/{p.presion_diastolica}</td>
+                        <td className="px-4 py-3 text-sm whitespace-nowrap">{p.frecuencia_cardiaca}<span className="text-[#666680] text-[10px]"> lpm</span></td>
+                        <td className="px-4 py-3 text-sm whitespace-nowrap">{p.glucosa}<span className="text-[#666680] text-[10px]"> mg</span></td>
+                        <td className="px-4 py-3 text-sm whitespace-nowrap">{p.colesterol}<span className="text-[#666680] text-[10px]"> mg</span></td>
+                        <td className="px-4 py-3 text-sm whitespace-nowrap">{p.saturacion_oxigeno}<span className="text-[#666680] text-[10px]">%</span></td>
+                        <td className="px-4 py-3 text-sm whitespace-nowrap">{p.temperatura}<span className="text-[#666680] text-[10px]">°</span></td>
+                        <td className="px-4 py-3 whitespace-nowrap">
                           {p.antecedentes_familiares
                             ? <span className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs">Sí</span>
                             : <span className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-[#1a1a2e]/50 text-[#555570] border border-[#2a2a45]/30 text-xs">No</span>}
                         </td>
-                        <td className="whitespace-nowrap">
+                        <td className="px-4 py-3 whitespace-nowrap">
                           {p.fumador
                             ? <span className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-rose-500/20 text-rose-400 border border-rose-500/30 text-xs">Sí</span>
                             : <span className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-[#1a1a2e]/50 text-[#555570] border border-[#2a2a45]/30 text-xs">No</span>}
                         </td>
-                        <td className="whitespace-nowrap">
+                        <td className="px-4 py-3 whitespace-nowrap">
                           {p.consumo_alcohol
                             ? <span className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-amber-500/20 text-amber-400 border border-amber-500/30 text-xs">Sí</span>
                             : <span className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-[#1a1a2e]/50 text-[#555570] border border-[#2a2a45]/30 text-xs">No</span>}
                         </td>
-                        <td className="text-sm whitespace-nowrap">
+                        <td className="px-4 py-3 text-sm whitespace-nowrap">
                           <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-medium border ${
                             p.actividad_fisica === 'sedentario' ? 'bg-rose-500/15 text-rose-300 border-rose-500/30' :
                             p.actividad_fisica === 'activa' ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' :
                             'bg-blue-500/15 text-blue-300 border-blue-500/30'
                           }`}>{p.actividad_fisica}</span>
                         </td>
-                        <td className="text-sm text-[#8888a0] max-w-[180px] truncate" title={p.diagnostico_preliminar}>{p.diagnostico_preliminar}</td>
-                        <td className="whitespace-nowrap">
+                        <td className="px-4 py-3 text-sm text-[#b0b0c8] max-w-[180px] truncate" title={p.diagnostico_preliminar}>{p.diagnostico_preliminar}</td>
+                        <td className="px-4 py-3 whitespace-nowrap">
                           {(() => {
-                            const riesgoReal = getRiesgoCalculado(p)
+                            const riesgoReal = p.riesgo_enfermedad || getRiesgoCalculado(p)
                             return (
                               <span className={`risk-indicator inline-block px-2.5 py-0.5 rounded-full text-xs font-medium border ${getRiesgoColor(riesgoReal)}`}>
                                 <span className={`risk-${riesgoReal.toLowerCase()}`} />
@@ -674,8 +673,8 @@ export default function PacientesPage() {
                             )
                           })()}
                         </td>
-                        <td className="text-xs text-[#555570] whitespace-nowrap">{formatDate(p.fecha_consulta)}</td>
-                        <td className="text-right whitespace-nowrap">
+                        <td className="px-4 py-3 text-xs text-[#8888a0] whitespace-nowrap">{formatDate(p.fecha_consulta)}</td>
+                        <td className="px-4 py-3 text-right whitespace-nowrap">
                           <div className="flex items-center justify-end gap-1.5">
                             <button type="button"
                               onClick={(e) => { e.stopPropagation(); abrirModal('ver', p) }}
@@ -718,7 +717,7 @@ export default function PacientesPage() {
                 </tbody>
               </table>
             </div>
-            <div className="px-6 py-4 border-t border-[#2a2a45]/20 flex flex-wrap items-center justify-between gap-3">
+            <div className="px-5 py-3.5 border-t border-[#2a2a45]/30 flex flex-wrap items-center justify-between gap-3 bg-[#0a0a14]/40">
               <p className="text-sm text-[#555570]">
                 {totalItems === 0 ? (
                   <>Sin resultados</>
@@ -881,7 +880,7 @@ export default function PacientesPage() {
                     <div className="bg-[#1a1a2e]/50 rounded-xl p-3 border border-[#2a2a45]/20">
                       <p className="text-[9px] text-[#555570] uppercase tracking-wider mb-1">Riesgo</p>
                       {detallePaciente && (() => {
-                        const riesgoReal = getRiesgoCalculado(detallePaciente)
+                        const riesgoReal = detallePaciente.riesgo_enfermedad || getRiesgoCalculado(detallePaciente)
                         return (
                           <span className={`risk-indicator inline-block px-2.5 py-0.5 rounded-full text-xs font-medium border ${getRiesgoColor(riesgoReal)}`}>
                             <span className={`risk-${riesgoReal.toLowerCase()}`} />
