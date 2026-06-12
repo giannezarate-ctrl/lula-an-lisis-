@@ -79,7 +79,7 @@ export default function LoginPage() {
                   onClick={() => {
                     setSelectedRole(r.role)
                     setEmail(`${r.role}@lula.com`)
-                    setPassword(`${r.role}123`)
+                    setPassword('')
                   }}
                   className={`p-3 rounded-xl border transition-all duration-200 text-center ${
                     isSelected
