@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import AppLayout from '@/components/ui/AppLayout'
 import ModalPortal from '@/components/ui/ModalPortal'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -48,6 +48,39 @@ export default function PacientesPage() {
   const [totalPages, setTotalPages] = useState(1)
   const [loadingProgress, setLoadingProgress] = useState({ loaded: 0, total: 0 })
   const [vistaActiva, setVistaActiva] = useState<'tabla' | 'criticos' | 'estadisticas'>('tabla')
+  const tableRef = useRef<HTMLDivElement>(null)
+  const trackRef = useRef<HTMLDivElement>(null)
+  const [hScroll, setHScroll] = useState({ pct: 0, thumbW: 100, trackW: 100, atStart: true, atEnd: true })
+
+  const syncHScroll = useCallback(() => {
+    const el = tableRef.current
+    if (!el) return
+    const maxScroll = el.scrollWidth - el.clientWidth
+    if (maxScroll <= 0) { setHScroll(s => ({ ...s, pct: 0, thumbW: el.clientWidth, trackW: el.clientWidth, atStart: true, atEnd: true })); return }
+    const pct = el.scrollLeft / maxScroll
+    const trackW = trackRef.current?.clientWidth || el.clientWidth
+    const thumbW = Math.max(40, (el.clientWidth / el.scrollWidth) * trackW)
+    setHScroll({ pct, thumbW, trackW, atStart: el.scrollLeft <= 2, atEnd: el.scrollLeft >= maxScroll - 2 })
+  }, [])
+
+  useEffect(() => {
+    const el = tableRef.current
+    if (!el) return
+    syncHScroll()
+    el.addEventListener('scroll', syncHScroll, { passive: true })
+    window.addEventListener('resize', syncHScroll)
+    return () => { el.removeEventListener('scroll', syncHScroll); window.removeEventListener('resize', syncHScroll) }
+  }, [syncHScroll, pacientes, loading])
+
+  function onTrackClick(e: React.MouseEvent) {
+    const track = trackRef.current
+    const el = tableRef.current
+    if (!track || !el) return
+    const rect = track.getBoundingClientRect()
+    const clickX = e.clientX - rect.left
+    const maxScroll = el.scrollWidth - el.clientWidth
+    el.scrollLeft = (clickX / rect.width) * el.scrollWidth - el.clientWidth / 2
+  }
 
   const stats = {
     total: pacientes.length,
@@ -62,6 +95,14 @@ export default function PacientesPage() {
   }
 
   useEffect(() => { cargarTodosLosPacientes() }, [])
+
+  const [sidebarW, setSidebarW] = useState(0)
+  useEffect(() => {
+    const calc = () => setSidebarW(window.innerWidth >= 1024 ? 260 : 0)
+    calc()
+    window.addEventListener('resize', calc)
+    return () => window.removeEventListener('resize', calc)
+  }, [])
 
   useEffect(() => {
     const unsub = suscribirCambioPacientes(() => cargarTodosLosPacientes())
@@ -445,7 +486,7 @@ export default function PacientesPage() {
           </div>
         </div>
       )}
-      <div className="w-full space-y-7 relative z-10">
+      <div className="w-full space-y-7 relative z-10 pb-14">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-6 border-b border-[#2a2a45]/30">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-violet-500/10 border border-purple-500/20 flex items-center justify-center">
@@ -593,7 +634,7 @@ export default function PacientesPage() {
                 <span className="px-1.5 py-0.5 rounded bg-purple-600/15 text-purple-300 border border-purple-500/20 font-mono">23 columnas</span>
               </div>
             </div>
-            <div className="overflow-x-auto">
+            <div ref={tableRef} className="overflow-x-auto">
               <table className="table-custom w-full text-sm">
                 <thead>
                   <tr className="border-b border-[#2a2a45]/40">
@@ -1065,6 +1106,24 @@ export default function PacientesPage() {
           </div>
         </div>
         </ModalPortal>
+      )}
+
+      {vistaActiva !== 'estadisticas' && !loading && pacientes.length > 0 && (
+        <div className="fixed bottom-0 right-0 z-50 bg-[#0a0a12]/95 backdrop-blur-xl border-t border-[#2a2a45]/30 px-4 sm:px-6 lg:px-14 py-2" style={{ left: sidebarW }}>
+          <div className="max-w-[1600px] mx-auto py-2 flex items-center gap-3">
+            <span className="text-[10px] text-[#555570] whitespace-nowrap hidden sm:block">Scroll horizontal</span>
+            <div ref={trackRef} onClick={onTrackClick}
+              className="flex-1 h-3 bg-[#1a1a2e] rounded-full cursor-pointer relative border border-[#2a2a45]/30 overflow-hidden group">
+              <div className="absolute top-0 bottom-0 left-0 bg-purple-500/20 rounded-full transition-all" style={{ width: `${hScroll.trackW > 0 ? (hScroll.thumbW / hScroll.trackW) * 100 : 0}%` }} />
+              <div className="absolute top-0.5 bottom-0.5 bg-purple-500/80 rounded-full shadow-lg shadow-purple-500/30 transition-all group-hover:bg-purple-400"
+                style={{
+                  left: `${hScroll.pct * (100 - (hScroll.trackW > 0 ? (hScroll.thumbW / hScroll.trackW) * 100 : 0))}%`,
+                  width: `${hScroll.trackW > 0 ? (hScroll.thumbW / hScroll.trackW) * 100 : 0}%`,
+                }} />
+            </div>
+            <span className="text-[10px] text-[#555570] whitespace-nowrap hidden sm:block">23 cols</span>
+          </div>
+        </div>
       )}
     </AppLayout>
   )
