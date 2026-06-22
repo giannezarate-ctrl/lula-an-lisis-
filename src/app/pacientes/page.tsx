@@ -83,6 +83,35 @@ export default function PacientesPage() {
     el.scrollLeft = (clickX / rect.width) * el.scrollWidth - el.clientWidth / 2
   }
 
+  function onThumbMouseDown(e: React.MouseEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    const el = tableRef.current
+    const track = trackRef.current
+    if (!el || !track) return
+    const trackRect = track.getBoundingClientRect()
+    const startX = e.clientX
+    const startScrollLeft = el.scrollLeft
+    const maxScroll = el.scrollWidth - el.clientWidth
+
+    function onMove(ev: MouseEvent) {
+      const dx = ev.clientX - startX
+      const scrollRange = maxScroll
+      const pixelRange = trackRect.width
+      if (el) el.scrollLeft = startScrollLeft + (dx / pixelRange) * scrollRange
+    }
+    function onUp() {
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+    document.body.style.cursor = 'grabbing'
+    document.body.style.userSelect = 'none'
+  }
+
   const stats = {
     total: pacientes.length,
     criticos: pacientes.filter(p => p.riesgo_enfermedad === 'Critico').length,
@@ -1118,7 +1147,7 @@ export default function PacientesPage() {
             <div ref={trackRef} onClick={onTrackClick}
               className="flex-1 h-3 bg-[#1a1a2e] rounded-full cursor-pointer relative border border-[#2a2a45]/30 overflow-hidden group">
               <div className="absolute top-0 bottom-0 left-0 bg-purple-500/20 rounded-full transition-all" style={{ width: `${hScroll.trackW > 0 ? (hScroll.thumbW / hScroll.trackW) * 100 : 0}%` }} />
-              <div className="absolute top-0.5 bottom-0.5 bg-purple-500/80 rounded-full shadow-lg shadow-purple-500/30 transition-all group-hover:bg-purple-400"
+              <div onMouseDown={onThumbMouseDown} className="absolute top-0.5 bottom-0.5 bg-purple-500/80 rounded-full shadow-lg shadow-purple-500/30 transition-all group-hover:bg-purple-400 cursor-grab active:cursor-grabbing"
                 style={{
                   left: `${hScroll.pct * (100 - (hScroll.trackW > 0 ? (hScroll.thumbW / hScroll.trackW) * 100 : 0))}%`,
                   width: `${hScroll.trackW > 0 ? (hScroll.thumbW / hScroll.trackW) * 100 : 0}%`,
