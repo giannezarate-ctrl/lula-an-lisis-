@@ -70,6 +70,12 @@ export default function PacientesPage() {
     return () => { el.removeEventListener('scroll', handleTableScroll); window.removeEventListener('resize', handleTableScroll) }
   }, [handleTableScroll, pacientes, loading])
 
+  function scrollTable(dir: 'left' | 'right') {
+    const el = tableScrollRef.current
+    if (!el) return
+    el.scrollBy({ left: dir === 'left' ? -300 : 300, behavior: 'smooth' })
+  }
+
   const stats = {
     total: pacientes.length,
     criticos: pacientes.filter(p => p.riesgo_enfermedad === 'Critico').length,
@@ -607,17 +613,33 @@ export default function PacientesPage() {
             ]}
           />
         ) : (
-          <div className="rounded-xl border border-[#2a2a45]/30 overflow-hidden bg-[#0e0e1a]/50 animate-fade-in">
+          <div className="rounded-xl border border-[#2a2a45]/30 bg-[#0e0e1a]/50 animate-fade-in relative">
             <div className="px-5 py-3 border-b border-[#2a2a45]/30 flex items-center justify-between flex-wrap gap-2">
               <p className="text-xs text-[#8888a0] flex items-center gap-2">
                 <ChevronRight className="w-3.5 h-3.5" />
                 <span>Desliza horizontalmente para ver todas las columnas · {pacientesFiltrados.length} pacientes</span>
               </p>
-              <div className="flex items-center gap-1.5 text-[10px] text-[#666680]">
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 text-[10px] text-[#666680]">
+                  <button
+                    onClick={() => scrollTable('left')}
+                    disabled={!scrollState.left}
+                    className="p-1.5 rounded-md text-[#8888a0] hover:text-white hover:bg-white/5 disabled:opacity-20 disabled:cursor-not-allowed transition-colors border border-[#2a2a45]/40"
+                    title="Mover a la izquierda">
+                    <ChevronLeft size={14} />
+                  </button>
+                  <button
+                    onClick={() => scrollTable('right')}
+                    disabled={!scrollState.right}
+                    className="p-1.5 rounded-md text-[#8888a0] hover:text-white hover:bg-white/5 disabled:opacity-20 disabled:cursor-not-allowed transition-colors border border-[#2a2a45]/40"
+                    title="Mover a la derecha">
+                    <ChevronRight size={14} />
+                  </button>
+                </div>
                 <span className="px-1.5 py-0.5 rounded bg-purple-600/15 text-purple-300 border border-purple-500/20 font-mono">23 columnas</span>
               </div>
             </div>
-            <div ref={tableScrollRef} className={`overflow-x-auto scroll-indicator scroll-indicator-left ${scrollState.right ? 'has-scroll' : ''} ${scrollState.left ? 'has-scroll-left' : ''}`}>
+            <div ref={tableScrollRef} className={`relative overflow-x-auto scroll-indicator scroll-indicator-left ${scrollState.right ? 'has-scroll' : ''} ${scrollState.left ? 'has-scroll-left' : ''}`}>
               <table className="table-custom w-full text-sm">
                 <thead>
                   <tr className="border-b border-[#2a2a45]/40">
