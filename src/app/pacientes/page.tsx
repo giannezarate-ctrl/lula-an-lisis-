@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import AppLayout from '@/components/ui/AppLayout'
 import ModalPortal from '@/components/ui/ModalPortal'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -48,33 +48,6 @@ export default function PacientesPage() {
   const [totalPages, setTotalPages] = useState(1)
   const [loadingProgress, setLoadingProgress] = useState({ loaded: 0, total: 0 })
   const [vistaActiva, setVistaActiva] = useState<'tabla' | 'criticos' | 'estadisticas'>('tabla')
-  const tableScrollRef = useRef<HTMLDivElement>(null)
-  const [scrollState, setScrollState] = useState({ right: false, left: false })
-
-  const handleTableScroll = useCallback(() => {
-    const el = tableScrollRef.current
-    if (!el) return
-    const maxScroll = el.scrollWidth - el.clientWidth
-    setScrollState({
-      right: el.scrollLeft < maxScroll - 5,
-      left: el.scrollLeft > 5,
-    })
-  }, [])
-
-  useEffect(() => {
-    const el = tableScrollRef.current
-    if (!el) return
-    handleTableScroll()
-    el.addEventListener('scroll', handleTableScroll, { passive: true })
-    window.addEventListener('resize', handleTableScroll)
-    return () => { el.removeEventListener('scroll', handleTableScroll); window.removeEventListener('resize', handleTableScroll) }
-  }, [handleTableScroll, pacientes, loading])
-
-  function scrollTable(dir: 'left' | 'right') {
-    const el = tableScrollRef.current
-    if (!el) return
-    el.scrollBy({ left: dir === 'left' ? -300 : 300, behavior: 'smooth' })
-  }
 
   const stats = {
     total: pacientes.length,
@@ -495,36 +468,6 @@ export default function PacientesPage() {
           </button>
         </div>
 
-        <div className="sticky top-0 z-30 py-3 bg-[#0a0a12]/95 backdrop-blur-xl -mx-6 md:-mx-10 lg:-mx-14 px-6 md:px-10 lg:px-14 border-b border-[#2a2a45]/20 shadow-lg shadow-black/30 mb-4">
-          <div className="flex items-center gap-1 p-1 bg-[#0e0e1a]/60 rounded-xl border border-[#2a2a45]/30 overflow-x-auto">
-          {([
-            { key: 'tabla' as const, label: 'Todos', icon: Users, badge: stats.total },
-            { key: 'criticos' as const, label: 'Criticos', icon: AlertCircle, badge: stats.criticos },
-            { key: 'estadisticas' as const, label: 'Estadisticas', icon: BarChart3, badge: null },
-          ]).map(tab => (
-            <button key={tab.key}
-              onClick={() => {
-                setVistaActiva(tab.key)
-                if (tab.key === 'criticos') setFiltro('critico')
-                else if (tab.key === 'tabla') setFiltro('todos')
-              }}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap ${
-                vistaActiva === tab.key
-                  ? 'bg-purple-600/20 text-purple-300 border border-purple-500/30 shadow-sm shadow-purple-500/10'
-                  : 'text-[#666680] hover:text-white hover:bg-white/[0.03] border border-transparent'
-              }`}>
-              <tab.icon size={15} />
-              {tab.label}
-              {tab.badge !== null && (
-                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
-                  vistaActiva === tab.key ? 'bg-purple-500/30 text-purple-200' : 'bg-[#1a1a2e] text-[#8888a0] border border-[#2a2a45]/40'
-                }`}>{tab.badge.toLocaleString()}</span>
-              )}
-            </button>
-          ))}
-        </div>
-        </div>
-
         {vistaActiva === 'estadisticas' && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 animate-fade-in">
             {[
@@ -539,30 +482,6 @@ export default function PacientesPage() {
               </div>
             ))}
           </div>
-        )}
-
-        {vistaActiva !== 'estadisticas' && (
-        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center animate-fade-in">
-          <div className="relative flex-1 max-w-lg">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#555570]" />
-            <input type="text" placeholder="Buscar por nombre o ID..."
-              value={search} onChange={e => setSearch(e.target.value)}
-              className="w-full rounded-lg pl-11 pr-4 py-2.5 text-sm bg-white/[0.04] border border-[#2a2a45]/40 focus:border-purple-500/50 focus:bg-white/[0.06] text-white placeholder-[#666680] focus:outline-none transition-all" />
-          </div>
-          <div className="flex gap-1 flex-wrap bg-white/[0.03] rounded-lg p-1 border border-[#2a2a45]/30">
-            {filtros.map(f => (
-              <button key={f.value}
-                onClick={() => setFiltro(f.value)}
-                className={`px-3.5 py-1.5 rounded-md text-[13px] font-medium transition-all duration-200 ${
-                  filtro === f.value
-                    ? 'bg-purple-500/15 text-purple-300'
-                    : 'text-[#666680] hover:text-white'
-                }`}>
-                {f.label}
-              </button>
-            ))}
-          </div>
-        </div>
         )}
 
         {vistaActiva !== 'estadisticas' && (loading ? (
@@ -620,26 +539,10 @@ export default function PacientesPage() {
                 <span>Desliza horizontalmente para ver todas las columnas · {pacientesFiltrados.length} pacientes</span>
               </p>
               <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1 text-[10px] text-[#666680]">
-                  <button
-                    onClick={() => scrollTable('left')}
-                    disabled={!scrollState.left}
-                    className="p-1.5 rounded-md text-[#8888a0] hover:text-white hover:bg-white/5 disabled:opacity-20 disabled:cursor-not-allowed transition-colors border border-[#2a2a45]/40"
-                    title="Mover a la izquierda">
-                    <ChevronLeft size={14} />
-                  </button>
-                  <button
-                    onClick={() => scrollTable('right')}
-                    disabled={!scrollState.right}
-                    className="p-1.5 rounded-md text-[#8888a0] hover:text-white hover:bg-white/5 disabled:opacity-20 disabled:cursor-not-allowed transition-colors border border-[#2a2a45]/40"
-                    title="Mover a la derecha">
-                    <ChevronRight size={14} />
-                  </button>
-                </div>
                 <span className="px-1.5 py-0.5 rounded bg-purple-600/15 text-purple-300 border border-purple-500/20 font-mono">23 columnas</span>
               </div>
             </div>
-            <div ref={tableScrollRef} className={`relative overflow-x-auto scroll-indicator scroll-indicator-left ${scrollState.right ? 'has-scroll' : ''} ${scrollState.left ? 'has-scroll-left' : ''}`}>
+            <div className="overflow-x-auto">
               <table className="table-custom w-full text-sm">
                 <thead>
                   <tr className="border-b border-[#2a2a45]/40">
@@ -891,7 +794,60 @@ export default function PacientesPage() {
               </div>
             </div>
           </div>
-        ))}
+        )      )}
+      </div>
+
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#0a0a12]/95 backdrop-blur-xl border-t border-[#2a2a45]/20 shadow-lg shadow-black/30">
+        <div className="max-w-[1600px] mx-auto px-6 md:px-10 lg:px-14 py-3">
+          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+            <div className="relative flex-1 max-w-lg">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#555570]" />
+              <input type="text" placeholder="Buscar por nombre o ID..."
+                value={search} onChange={e => setSearch(e.target.value)}
+                className="w-full rounded-lg pl-11 pr-4 py-2.5 text-sm bg-white/[0.04] border border-[#2a2a45]/40 focus:border-purple-500/50 focus:bg-white/[0.06] text-white placeholder-[#666680] focus:outline-none transition-all" />
+            </div>
+            <div className="flex items-center gap-1 p-1 bg-[#0e0e1a]/60 rounded-xl border border-[#2a2a45]/30 overflow-x-auto">
+              {([
+                { key: 'tabla' as const, label: 'Todos', icon: Users, badge: stats.total },
+                { key: 'criticos' as const, label: 'Criticos', icon: AlertCircle, badge: stats.criticos },
+                { key: 'estadisticas' as const, label: 'Estadisticas', icon: BarChart3, badge: null },
+              ]).map(tab => (
+                <button key={tab.key}
+                  onClick={() => {
+                    setVistaActiva(tab.key)
+                    if (tab.key === 'criticos') setFiltro('critico')
+                    else if (tab.key === 'tabla') setFiltro('todos')
+                  }}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap ${
+                    vistaActiva === tab.key
+                      ? 'bg-purple-600/20 text-purple-300 border border-purple-500/30 shadow-sm shadow-purple-500/10'
+                      : 'text-[#666680] hover:text-white hover:bg-white/[0.03] border border-transparent'
+                  }`}>
+                  <tab.icon size={15} />
+                  {tab.label}
+                  {tab.badge !== null && (
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
+                      vistaActiva === tab.key ? 'bg-purple-500/30 text-purple-200' : 'bg-[#1a1a2e] text-[#8888a0] border border-[#2a2a45]/40'
+                    }`}>{tab.badge.toLocaleString()}</span>
+                  )}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-1 flex-wrap bg-white/[0.03] rounded-lg p-1 border border-[#2a2a45]/30">
+              {filtros.map(f => (
+                <button key={f.value}
+                  onClick={() => setFiltro(f.value)}
+                  className={`px-3 py-1.5 rounded-md text-[12px] font-medium transition-all duration-200 ${
+                    filtro === f.value
+                      ? 'bg-purple-500/15 text-purple-300'
+                      : 'text-[#666680] hover:text-white'
+                  }`}>
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
 
       {confirmDelete && (
