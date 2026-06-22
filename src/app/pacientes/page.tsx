@@ -468,6 +468,57 @@ export default function PacientesPage() {
           </button>
         </div>
 
+        <div className="sticky top-0 z-30 py-3 bg-[#0a0a12]/95 backdrop-blur-xl -mx-6 md:-mx-10 lg:-mx-14 px-6 md:px-10 lg:px-14 border-b border-[#2a2a45]/20 shadow-lg shadow-black/30 mb-4">
+          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+            <div className="relative flex-1 max-w-lg">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#555570]" />
+              <input type="text" placeholder="Buscar por nombre o ID..."
+                value={search} onChange={e => setSearch(e.target.value)}
+                className="w-full rounded-lg pl-11 pr-4 py-2.5 text-sm bg-white/[0.04] border border-[#2a2a45]/40 focus:border-purple-500/50 focus:bg-white/[0.06] text-white placeholder-[#666680] focus:outline-none transition-all" />
+            </div>
+            <div className="flex items-center gap-1 p-1 bg-[#0e0e1a]/60 rounded-xl border border-[#2a2a45]/30 overflow-x-auto">
+              {([
+                { key: 'tabla' as const, label: 'Todos', icon: Users, badge: stats.total },
+                { key: 'criticos' as const, label: 'Criticos', icon: AlertCircle, badge: stats.criticos },
+                { key: 'estadisticas' as const, label: 'Estadisticas', icon: BarChart3, badge: null },
+              ]).map(tab => (
+                <button key={tab.key}
+                  onClick={() => {
+                    setVistaActiva(tab.key)
+                    if (tab.key === 'criticos') setFiltro('critico')
+                    else if (tab.key === 'tabla') setFiltro('todos')
+                  }}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap ${
+                    vistaActiva === tab.key
+                      ? 'bg-purple-600/20 text-purple-300 border border-purple-500/30 shadow-sm shadow-purple-500/10'
+                      : 'text-[#666680] hover:text-white hover:bg-white/[0.03] border border-transparent'
+                  }`}>
+                  <tab.icon size={15} />
+                  {tab.label}
+                  {tab.badge !== null && (
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
+                      vistaActiva === tab.key ? 'bg-purple-500/30 text-purple-200' : 'bg-[#1a1a2e] text-[#8888a0] border border-[#2a2a45]/40'
+                    }`}>{tab.badge.toLocaleString()}</span>
+                  )}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-1 flex-wrap bg-white/[0.03] rounded-lg p-1 border border-[#2a2a45]/30">
+              {filtros.map(f => (
+                <button key={f.value}
+                  onClick={() => setFiltro(f.value)}
+                  className={`px-3 py-1.5 rounded-md text-[12px] font-medium transition-all duration-200 ${
+                    filtro === f.value
+                      ? 'bg-purple-500/15 text-purple-300'
+                      : 'text-[#666680] hover:text-white'
+                  }`}>
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
         {vistaActiva === 'estadisticas' && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 animate-fade-in">
             {[
@@ -795,59 +846,6 @@ export default function PacientesPage() {
             </div>
           </div>
         )      )}
-      </div>
-
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#0a0a12]/95 backdrop-blur-xl border-t border-[#2a2a45]/20 shadow-lg shadow-black/30">
-        <div className="max-w-[1600px] mx-auto px-6 md:px-10 lg:px-14 py-3">
-          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-            <div className="relative flex-1 max-w-lg">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#555570]" />
-              <input type="text" placeholder="Buscar por nombre o ID..."
-                value={search} onChange={e => setSearch(e.target.value)}
-                className="w-full rounded-lg pl-11 pr-4 py-2.5 text-sm bg-white/[0.04] border border-[#2a2a45]/40 focus:border-purple-500/50 focus:bg-white/[0.06] text-white placeholder-[#666680] focus:outline-none transition-all" />
-            </div>
-            <div className="flex items-center gap-1 p-1 bg-[#0e0e1a]/60 rounded-xl border border-[#2a2a45]/30 overflow-x-auto">
-              {([
-                { key: 'tabla' as const, label: 'Todos', icon: Users, badge: stats.total },
-                { key: 'criticos' as const, label: 'Criticos', icon: AlertCircle, badge: stats.criticos },
-                { key: 'estadisticas' as const, label: 'Estadisticas', icon: BarChart3, badge: null },
-              ]).map(tab => (
-                <button key={tab.key}
-                  onClick={() => {
-                    setVistaActiva(tab.key)
-                    if (tab.key === 'criticos') setFiltro('critico')
-                    else if (tab.key === 'tabla') setFiltro('todos')
-                  }}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap ${
-                    vistaActiva === tab.key
-                      ? 'bg-purple-600/20 text-purple-300 border border-purple-500/30 shadow-sm shadow-purple-500/10'
-                      : 'text-[#666680] hover:text-white hover:bg-white/[0.03] border border-transparent'
-                  }`}>
-                  <tab.icon size={15} />
-                  {tab.label}
-                  {tab.badge !== null && (
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
-                      vistaActiva === tab.key ? 'bg-purple-500/30 text-purple-200' : 'bg-[#1a1a2e] text-[#8888a0] border border-[#2a2a45]/40'
-                    }`}>{tab.badge.toLocaleString()}</span>
-                  )}
-                </button>
-              ))}
-            </div>
-            <div className="flex gap-1 flex-wrap bg-white/[0.03] rounded-lg p-1 border border-[#2a2a45]/30">
-              {filtros.map(f => (
-                <button key={f.value}
-                  onClick={() => setFiltro(f.value)}
-                  className={`px-3 py-1.5 rounded-md text-[12px] font-medium transition-all duration-200 ${
-                    filtro === f.value
-                      ? 'bg-purple-500/15 text-purple-300'
-                      : 'text-[#666680] hover:text-white'
-                  }`}>
-                  {f.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
       </div>
 
       {confirmDelete && (
