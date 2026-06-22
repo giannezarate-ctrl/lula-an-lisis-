@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import AppLayout from '@/components/ui/AppLayout'
 import ModalPortal from '@/components/ui/ModalPortal'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -48,6 +48,27 @@ export default function PacientesPage() {
   const [totalPages, setTotalPages] = useState(1)
   const [loadingProgress, setLoadingProgress] = useState({ loaded: 0, total: 0 })
   const [vistaActiva, setVistaActiva] = useState<'tabla' | 'criticos' | 'estadisticas'>('tabla')
+  const tableScrollRef = useRef<HTMLDivElement>(null)
+  const [scrollState, setScrollState] = useState({ right: false, left: false })
+
+  const handleTableScroll = useCallback(() => {
+    const el = tableScrollRef.current
+    if (!el) return
+    const maxScroll = el.scrollWidth - el.clientWidth
+    setScrollState({
+      right: el.scrollLeft < maxScroll - 5,
+      left: el.scrollLeft > 5,
+    })
+  }, [])
+
+  useEffect(() => {
+    const el = tableScrollRef.current
+    if (!el) return
+    handleTableScroll()
+    el.addEventListener('scroll', handleTableScroll, { passive: true })
+    window.addEventListener('resize', handleTableScroll)
+    return () => { el.removeEventListener('scroll', handleTableScroll); window.removeEventListener('resize', handleTableScroll) }
+  }, [handleTableScroll, pacientes, loading])
 
   const stats = {
     total: pacientes.length,
@@ -596,7 +617,7 @@ export default function PacientesPage() {
                 <span className="px-1.5 py-0.5 rounded bg-purple-600/15 text-purple-300 border border-purple-500/20 font-mono">23 columnas</span>
               </div>
             </div>
-            <div className="overflow-x-auto">
+            <div ref={tableScrollRef} className={`overflow-x-auto scroll-indicator scroll-indicator-left ${scrollState.right ? 'has-scroll' : ''} ${scrollState.left ? 'has-scroll-left' : ''}`}>
               <table className="table-custom w-full text-sm">
                 <thead>
                   <tr className="border-b border-[#2a2a45]/40">
