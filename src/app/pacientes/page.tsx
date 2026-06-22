@@ -18,6 +18,7 @@ import {
   X, AlertCircle, CheckCircle2, Users,
   Sparkles, RefreshCw, Database, FileSpreadsheet, UserPlus,
   Brain, Stethoscope, ChevronRight, ChevronLeft, ChevronsLeft, ChevronsRight, Loader2,
+  BarChart3, Activity,
 } from 'lucide-react'
 
 const initialForm: PacienteFormData = {
@@ -46,6 +47,19 @@ export default function PacientesPage() {
   const [totalServer, setTotalServer] = useState(0)
   const [totalPages, setTotalPages] = useState(1)
   const [loadingProgress, setLoadingProgress] = useState({ loaded: 0, total: 0 })
+  const [vistaActiva, setVistaActiva] = useState<'tabla' | 'criticos' | 'estadisticas'>('tabla')
+
+  const stats = {
+    total: pacientes.length,
+    criticos: pacientes.filter(p => p.riesgo_enfermedad === 'Critico').length,
+    alto: pacientes.filter(p => p.riesgo_enfermedad === 'Alto').length,
+    medio: pacientes.filter(p => p.riesgo_enfermedad === 'Medio').length,
+    bajo: pacientes.filter(p => p.riesgo_enfermedad === 'Bajo').length,
+    imcPromedio: pacientes.length > 0 ? (pacientes.reduce((s, p) => s + (p.imc || 0), 0) / pacientes.length).toFixed(1) : '0',
+    edadPromedio: pacientes.length > 0 ? (pacientes.reduce((s, p) => s + p.edad, 0) / pacientes.length).toFixed(1) : '0',
+    paPromedio: pacientes.length > 0 ? Math.round(pacientes.reduce((s, p) => s + p.presion_sistolica, 0) / pacientes.length) : 0,
+    glucosaPromedio: pacientes.length > 0 ? Math.round(pacientes.reduce((s, p) => s + p.glucosa, 0) / pacientes.length) : 0,
+  }
 
   useEffect(() => { cargarTodosLosPacientes() }, [])
 
@@ -454,6 +468,51 @@ export default function PacientesPage() {
           </button>
         </div>
 
+        <div className="flex items-center gap-1 p-1 bg-[#0e0e1a]/60 rounded-xl border border-[#2a2a45]/30 overflow-x-auto">
+          {([
+            { key: 'tabla' as const, label: 'Todos', icon: Users, badge: stats.total },
+            { key: 'criticos' as const, label: 'Criticos', icon: AlertCircle, badge: stats.criticos },
+            { key: 'estadisticas' as const, label: 'Estadisticas', icon: BarChart3, badge: null },
+          ]).map(tab => (
+            <button key={tab.key}
+              onClick={() => {
+                setVistaActiva(tab.key)
+                if (tab.key === 'criticos') setFiltro('critico')
+                else if (tab.key === 'tabla') setFiltro('todos')
+              }}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap ${
+                vistaActiva === tab.key
+                  ? 'bg-purple-600/20 text-purple-300 border border-purple-500/30 shadow-sm shadow-purple-500/10'
+                  : 'text-[#666680] hover:text-white hover:bg-white/[0.03] border border-transparent'
+              }`}>
+              <tab.icon size={15} />
+              {tab.label}
+              {tab.badge !== null && (
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
+                  vistaActiva === tab.key ? 'bg-purple-500/30 text-purple-200' : 'bg-[#1a1a2e] text-[#8888a0] border border-[#2a2a45]/40'
+                }`}>{tab.badge.toLocaleString()}</span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {vistaActiva === 'estadisticas' && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 animate-fade-in">
+            {[
+              { label: 'Pacientes Totales', value: stats.total, icon: Users, color: 'purple' },
+              { label: 'Edad Promedio', value: `${stats.edadPromedio} a`, icon: Users, color: 'blue' },
+              { label: 'IMC Promedio', value: stats.imcPromedio, icon: Activity, color: 'emerald' },
+              { label: 'PA Promedio', value: `${stats.paPromedio} mmHg`, icon: Activity, color: 'amber' },
+            ].map((m, i) => (
+              <div key={i} className={`glass-card rounded-xl p-4 border border-${m.color}-500/20 bg-${m.color}-900/10`}>
+                <p className="text-[10px] text-[#8888a0] uppercase tracking-wider mb-1">{m.label}</p>
+                <p className={`text-lg font-bold text-${m.color}-400`}>{m.value}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {vistaActiva !== 'estadisticas' && (
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center animate-fade-in">
           <div className="relative flex-1 max-w-lg">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#555570]" />
@@ -475,8 +534,9 @@ export default function PacientesPage() {
             ))}
           </div>
         </div>
+        )}
 
-        {loading ? (
+        {vistaActiva !== 'estadisticas' && (loading ? (
           <div className="glass-card rounded-2xl border border-[#2a2a45]/30 overflow-hidden">
             <div className="p-10 space-y-5">
               {Array.from({ length: 5 }).map((_, i) => (
@@ -786,7 +846,7 @@ export default function PacientesPage() {
               </div>
             </div>
           </div>
-        )}
+        ))}
       </div>
 
       {confirmDelete && (

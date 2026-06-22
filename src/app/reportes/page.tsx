@@ -152,23 +152,27 @@ export default function ReportesPage() {
         headerPDF(doc, 'Reporte de Pacientes en Estado Critico', `Total pacientes criticos: ${criticos.length} | Poblacion total: ${pacientes.length}`)
         autoTable(doc, {
           startY: 64,
-          head: [['ID', 'Nombre Completo', 'Edad', 'Sexo', 'PA (mmHg)', 'Glucosa', 'SpO2', 'Riesgo', 'Diagnostico', 'Fecha']],
+          head: [['ID', 'Nombre', 'Edad', 'Sexo', 'Peso', 'Altura', 'IMC', 'PA', 'FC', 'Glucosa', 'Colesterol', 'SpO2', 'Riesgo', 'Diagnostico', 'Fecha']],
           body: criticos.map(p => [
             String(p.id_paciente),
             `${p.nombres} ${p.apellidos}`,
             String(p.edad),
             p.sexo,
+            String(p.peso),
+            String(p.altura),
+            (p.imc || 0).toFixed(1),
             `${p.presion_sistolica}/${p.presion_diastolica}`,
-            `${p.glucosa} mg/dL`,
+            String(p.frecuencia_cardiaca),
+            String(p.glucosa),
+            String(p.colesterol),
             `${p.saturacion_oxigeno}%`,
             p.riesgo_enfermedad,
             p.diagnostico_preliminar || '-',
             p.fecha_consulta,
           ]),
-          styles: { fontSize: 7, textColor: [60, 60, 80], lineColor: [220, 220, 230] },
-          headStyles: { fillColor: [220, 38, 38], textColor: [255, 255, 255], fontSize: 7, fontStyle: 'bold' },
+          styles: { fontSize: 5, textColor: [60, 60, 80], lineColor: [220, 220, 230] },
+          headStyles: { fillColor: [220, 38, 38], textColor: [255, 255, 255], fontSize: 5, fontStyle: 'bold' },
           alternateRowStyles: { fillColor: [254, 242, 242] },
-          columnStyles: { 0: { cellWidth: 10 }, 1: { cellWidth: 35 } },
         })
       }
 
@@ -217,19 +221,25 @@ export default function ReportesPage() {
 
         autoTable(doc, {
           startY: lastY1 + 6,
-          head: [['ID', 'Nombre', 'Edad', 'Sexo', 'IMC', 'PA', 'Glucosa', 'Riesgo']],
+          head: [['ID', 'Nombre', 'Edad', 'Sexo', 'Peso', 'Altura', 'IMC', 'PA', 'FC', 'Glucosa', 'Colesterol', 'SpO2', 'Riesgo', 'Diagnostico']],
           body: pacientes.map(p => [
             String(p.id_paciente),
             `${p.nombres} ${p.apellidos}`,
             String(p.edad),
             p.sexo,
+            String(p.peso),
+            String(p.altura),
             (p.imc || 0).toFixed(1),
             `${p.presion_sistolica}/${p.presion_diastolica}`,
+            String(p.frecuencia_cardiaca),
             String(p.glucosa),
+            String(p.colesterol),
+            `${p.saturacion_oxigeno}%`,
             p.riesgo_enfermedad,
+            p.diagnostico_preliminar || '',
           ]),
-          styles: { fontSize: 6, textColor: [60, 60, 80] },
-          headStyles: { fillColor: [124, 58, 237], textColor: [255, 255, 255], fontSize: 6, fontStyle: 'bold' },
+          styles: { fontSize: 5, textColor: [60, 60, 80] },
+          headStyles: { fillColor: [124, 58, 237], textColor: [255, 255, 255], fontSize: 5, fontStyle: 'bold' },
           alternateRowStyles: { fillColor: [245, 243, 255] },
         })
       }
@@ -375,15 +385,25 @@ export default function ReportesPage() {
           Apellidos: p.apellidos,
           Edad: p.edad,
           Sexo: p.sexo,
+          Peso: p.peso,
+          Altura: p.altura,
+          IMC: p.imc,
+          'Clasificacion IMC': p.clasificacion_imc,
           'PA Sistolica (mmHg)': p.presion_sistolica,
           'PA Diastolica (mmHg)': p.presion_diastolica,
+          FC: p.frecuencia_cardiaca,
           Glucosa: p.glucosa,
           Colesterol: p.colesterol,
           SpO2: p.saturacion_oxigeno,
           Temperatura: p.temperatura,
+          'Ant. Familiares': p.antecedentes_familiares ? 'Si' : 'No',
+          Fumador: p.fumador ? 'Si' : 'No',
+          'Consumo Alcohol': p.consumo_alcohol ? 'Si' : 'No',
+          'Act. Fisica': p.actividad_fisica,
           Riesgo: p.riesgo_enfermedad,
           Diagnostico: p.diagnostico_preliminar,
           'Fecha Consulta': p.fecha_consulta,
+          'Fecha Registro': p.created_at || '',
         }))
         const ws = XLSX.utils.json_to_sheet(data)
         ws['!cols'] = Object.keys(data[0] || {}).map(() => ({ wch: 18 }))
@@ -408,13 +428,14 @@ export default function ReportesPage() {
           Colesterol: p.colesterol,
           SpO2: p.saturacion_oxigeno,
           Temperatura: p.temperatura,
-          'Ant. Familiares': p.antecedentes_familiares,
-          Fumador: p.fumador ? 'Sí' : 'No',
-          Alcohol: p.consumo_alcohol,
+          'Ant. Familiares': p.antecedentes_familiares ? 'Si' : 'No',
+          Fumador: p.fumador ? 'Si' : 'No',
+          'Consumo Alcohol': p.consumo_alcohol ? 'Si' : 'No',
           'Act. Fisica': p.actividad_fisica,
           Riesgo: p.riesgo_enfermedad,
           Diagnostico: p.diagnostico_preliminar,
           'Fecha Consulta': p.fecha_consulta,
+          'Fecha Registro': p.created_at || '',
         }))
         const imcProm = pacientes.length > 0 ? (pacientes.reduce((s, p) => s + (p.imc || 0), 0) / pacientes.length).toFixed(1) : '0'
         const resumen = [
@@ -512,11 +533,11 @@ export default function ReportesPage() {
       let rows: (string | number)[][] = []
 
       if (tipo === 'criticos') {
-        headers = ['ID', 'Nombres', 'Apellidos', 'Edad', 'Sexo', 'PA Sistolica', 'PA Diastolica', 'Glucosa', 'SpO2', 'Riesgo', 'Diagnostico', 'Fecha']
-        rows = criticos.map(p => [p.id_paciente, p.nombres, p.apellidos, p.edad, p.sexo, p.presion_sistolica, p.presion_diastolica, p.glucosa, p.saturacion_oxigeno, p.riesgo_enfermedad, p.diagnostico_preliminar || '', p.fecha_consulta])
+        headers = ['ID', 'Nombres', 'Apellidos', 'Edad', 'Sexo', 'Peso', 'Altura', 'IMC', 'Clasif IMC', 'PA Sistolica', 'PA Diastolica', 'FC', 'Glucosa', 'Colesterol', 'SpO2', 'Temp', 'Ant. Fam.', 'Fumador', 'Alcohol', 'Act. Fisica', 'Riesgo', 'Diagnostico', 'Fecha', 'Fecha Registro']
+        rows = criticos.map(p => [p.id_paciente, p.nombres, p.apellidos, p.edad, p.sexo, p.peso, p.altura, p.imc, p.clasificacion_imc, p.presion_sistolica, p.presion_diastolica, p.frecuencia_cardiaca, p.glucosa, p.colesterol, p.saturacion_oxigeno, p.temperatura, p.antecedentes_familiares ? 'Si' : 'No', p.fumador ? 'Si' : 'No', p.consumo_alcohol ? 'Si' : 'No', p.actividad_fisica, p.riesgo_enfermedad, p.diagnostico_preliminar || '', p.fecha_consulta, p.created_at || ''])
       } else if (tipo === 'clinico') {
-        headers = ['ID', 'Nombres', 'Apellidos', 'Edad', 'Sexo', 'IMC', 'PA Sistolica', 'PA Diastolica', 'Glucosa', 'Colesterol', 'SpO2', 'Fumador', 'Riesgo', 'Diagnostico', 'Fecha']
-        rows = pacientes.map(p => [p.id_paciente, p.nombres, p.apellidos, p.edad, p.sexo, p.imc, p.presion_sistolica, p.presion_diastolica, p.glucosa, p.colesterol, p.saturacion_oxigeno, p.fumador ? 'Sí' : 'No', p.riesgo_enfermedad, p.diagnostico_preliminar || '', p.fecha_consulta])
+        headers = ['ID', 'Nombres', 'Apellidos', 'Edad', 'Sexo', 'Peso', 'Altura', 'IMC', 'Clasif IMC', 'PA Sistolica', 'PA Diastolica', 'FC', 'Glucosa', 'Colesterol', 'SpO2', 'Temp', 'Ant. Fam.', 'Fumador', 'Alcohol', 'Act. Fisica', 'Riesgo', 'Diagnostico', 'Fecha', 'Fecha Registro']
+        rows = pacientes.map(p => [p.id_paciente, p.nombres, p.apellidos, p.edad, p.sexo, p.peso, p.altura, p.imc, p.clasificacion_imc, p.presion_sistolica, p.presion_diastolica, p.frecuencia_cardiaca, p.glucosa, p.colesterol, p.saturacion_oxigeno, p.temperatura, p.antecedentes_familiares ? 'Si' : 'No', p.fumador ? 'Si' : 'No', p.consumo_alcohol ? 'Si' : 'No', p.actividad_fisica, p.riesgo_enfermedad, p.diagnostico_preliminar || '', p.fecha_consulta, p.created_at || ''])
       } else if (tipo === 'etl') {
         headers = ['ID', 'Fecha', 'Archivo', 'Total', 'Validos', 'Inconsistencias', 'Calidad %', 'Tiempo (s)']
         rows = etlLogs.map(l => [l.id, new Date(l.fecha_ejecucion).toLocaleString('es-ES'), l.archivo_nombre, l.total_registros, l.registros_validos, l.inconsistencias, l.calidad_pct, l.tiempo_ejecucion])

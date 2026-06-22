@@ -55,6 +55,16 @@ function normalizarHeader(raw: string): string {
 const BOOL_TRUE = new Set(['true', '1', 'si', 'sí', 'yes', 'y', 'verdadero', 'cierto', 'positivo'])
 const parseBool = (v: any): boolean => BOOL_TRUE.has(String(v ?? '').toLowerCase().trim())
 
+function convertirPA(valor: any, defaultVal: number): number {
+  if (valor === null || valor === undefined || valor === '') return defaultVal
+  const num = parseInt(String(valor))
+  if (!isNaN(num) && num > 0) return num
+  const s = String(valor).trim().toLowerCase()
+  if (['alto', 'alta', 'high'].includes(s)) return 130 + Math.floor(Math.random() * 51)
+  if (['bajo', 'baja', 'low'].includes(s)) return 80 + Math.floor(Math.random() * 31)
+  return defaultVal
+}
+
 function normalizarSexo(v: any): string | null {
   const m: Record<string, string> = {
     m: 'Masculino', masculino: 'Masculino', hombre: 'Masculino', varon: 'Masculino', masculina: 'Masculino',
@@ -224,8 +234,8 @@ function parseRows(raw: any[]): {
           const altCm = rawAlt > 0 && rawAlt < 10 ? Math.round(rawAlt * 100 * 100) / 100 : rawAlt
           return parseFloat(mapped.imc) || calcularIMC(parseFloat(mapped.peso) || clinicalDefault('peso'), altCm)
         })(),
-        presion_sistolica: parseInt(mapped.presion_sistolica) || clinicalDefault('presion_sistolica'),
-        presion_diastolica: parseInt(mapped.presion_diastolica) || clinicalDefault('presion_diastolica'),
+        presion_sistolica: convertirPA(mapped.presion_sistolica, clinicalDefault('presion_sistolica')),
+        presion_diastolica: convertirPA(mapped.presion_diastolica, clinicalDefault('presion_diastolica')),
         frecuencia_cardiaca: parseInt(mapped.frecuencia_cardiaca) || clinicalDefault('frecuencia_cardiaca'),
         glucosa: parseFloat(mapped.glucosa) || clinicalDefault('glucosa'),
         colesterol: parseFloat(mapped.colesterol) || clinicalDefault('colesterol'),
