@@ -27,6 +27,7 @@ const ALIASES: Record<string, string> = {
   pa_sistolica: 'presion_sistolica', pa_sistólica: 'presion_sistolica', pas: 'presion_sistolica', systolic: 'presion_sistolica',
   presion_diastolica: 'presion_diastolica', diastolica: 'presion_diastolica', presión_diastólica: 'presion_diastolica',
   pa_diastolica: 'presion_diastolica', pa_diastólica: 'presion_diastolica', pad: 'presion_diastolica', diastolic: 'presion_diastolica',
+  pa: 'pa_combinada', presion_arterial: 'pa_combinada', presión_arterial: 'pa_combinada', blood_pressure: 'pa_combinada', bp: 'pa_combinada',
   frecuencia_cardiaca: 'frecuencia_cardiaca', fc: 'frecuencia_cardiaca', pulso: 'frecuencia_cardiaca', heart_rate: 'frecuencia_cardiaca',
   glucosa: 'glucosa', glucose: 'glucosa',
   colesterol: 'colesterol', cholesterol: 'colesterol',
@@ -201,6 +202,21 @@ function parseRows(raw: any[]): {
     try {
       const mapped: Record<string, any> = {}
       for (const [k, v] of Object.entries(row)) mapped[normalizarHeader(k)] = v
+
+      if (mapped.pa_combinada && !mapped.presion_sistolica && !mapped.presion_diastolica) {
+        const paVal = String(mapped.pa_combinada).trim()
+        const parts = paVal.split('/')
+        if (parts.length === 2) {
+          mapped.presion_sistolica = parts[0].trim()
+          mapped.presion_diastolica = parts[1].trim()
+        } else if (['alto', 'alta', 'high'].includes(paVal.toLowerCase())) {
+          mapped.presion_sistolica = 'alto'
+          mapped.presion_diastolica = 'alto'
+        } else if (['bajo', 'baja', 'low'].includes(paVal.toLowerCase())) {
+          mapped.presion_sistolica = 'bajo'
+          mapped.presion_diastolica = 'bajo'
+        }
+      }
 
       let id = parseInt(mapped.id_paciente)
       if (!id || id <= 0 || isNaN(id)) {

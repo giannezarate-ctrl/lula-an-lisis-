@@ -468,7 +468,8 @@ export default function PacientesPage() {
           </button>
         </div>
 
-        <div className="flex items-center gap-1 p-1 bg-[#0e0e1a]/60 rounded-xl border border-[#2a2a45]/30 overflow-x-auto">
+        <div className="sticky top-0 z-30 py-3 bg-[#0a0a12]/95 backdrop-blur-xl -mx-6 md:-mx-10 lg:-mx-14 px-6 md:px-10 lg:px-14 border-b border-[#2a2a45]/20 shadow-lg shadow-black/30 mb-4">
+          <div className="flex items-center gap-1 p-1 bg-[#0e0e1a]/60 rounded-xl border border-[#2a2a45]/30 overflow-x-auto">
           {([
             { key: 'tabla' as const, label: 'Todos', icon: Users, badge: stats.total },
             { key: 'criticos' as const, label: 'Criticos', icon: AlertCircle, badge: stats.criticos },
@@ -494,6 +495,7 @@ export default function PacientesPage() {
               )}
             </button>
           ))}
+        </div>
         </div>
 
         {vistaActiva === 'estadisticas' && (
