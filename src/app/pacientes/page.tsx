@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import AppLayout from '@/components/ui/AppLayout'
 import ModalPortal from '@/components/ui/ModalPortal'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -103,6 +104,8 @@ export default function PacientesPage() {
     window.addEventListener('resize', calc)
     return () => window.removeEventListener('resize', calc)
   }, [])
+
+  const showBottomBar = vistaActiva !== 'estadisticas' && !loading && pacientes.length > 0
 
   useEffect(() => {
     const unsub = suscribirCambioPacientes(() => cargarTodosLosPacientes())
@@ -1108,9 +1111,9 @@ export default function PacientesPage() {
         </ModalPortal>
       )}
 
-      {vistaActiva !== 'estadisticas' && !loading && pacientes.length > 0 && (
-        <div className="fixed bottom-0 right-0 z-50 bg-[#0a0a12]/95 backdrop-blur-xl border-t border-[#2a2a45]/30 px-4 sm:px-6 lg:px-14 py-2" style={{ left: sidebarW }}>
-          <div className="max-w-[1600px] mx-auto py-2 flex items-center gap-3">
+      {showBottomBar && typeof window !== 'undefined' && createPortal(
+        <div className="fixed bottom-0 left-0 right-0 z-[9999] bg-[#0a0a12]/95 backdrop-blur-xl border-t border-[#2a2a45]/30" style={{ marginLeft: sidebarW }}>
+          <div className="px-4 sm:px-6 lg:px-10 py-2 flex items-center gap-3">
             <span className="text-[10px] text-[#555570] whitespace-nowrap hidden sm:block">Scroll horizontal</span>
             <div ref={trackRef} onClick={onTrackClick}
               className="flex-1 h-3 bg-[#1a1a2e] rounded-full cursor-pointer relative border border-[#2a2a45]/30 overflow-hidden group">
@@ -1123,7 +1126,8 @@ export default function PacientesPage() {
             </div>
             <span className="text-[10px] text-[#555570] whitespace-nowrap hidden sm:block">23 cols</span>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </AppLayout>
   )
